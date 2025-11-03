@@ -1,0 +1,6 @@
+{
+    "api_key": "",
+    "port": 8080,
+    "lang": "Russian",
+    "img2txt_prompt": "write a description for the meme that's in the picture in {lang}."
+}
