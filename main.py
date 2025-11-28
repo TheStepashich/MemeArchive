@@ -1,77 +1,61 @@
 import os
-import uuid
-from pathlib import Path
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
-from typing import List, Optional
-import io
-from fastapi.responses import FileResponse
+from config import UPLOADS_DIR, PORT
+from google_ai import get_embedding, get_img_description
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from Config import Config
-from ChromaDBController import ChromaDBController
-from GeminiController import GeminiController
-
-
-# Инициализация компонентов (один раз при старте)
-config = Config()
-db = ChromaDBController(
-    collection_name="images",
-    persist_directory="./chroma_db"
-)
-gemini = GeminiController(api_key=config.api_key)
-
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
 
 app = FastAPI(title="Image Semantic Search API")
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # или укажи конкретные домены, например: ["http://localhost:8000"]
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
+from fastapi import File, Form, UploadFile, HTTPException
+import uuid
+from pathlib import Path
+
+from chroma_db import db_add, db_search
+
 @app.post("/add")
-async def add_image(
-    file: UploadFile = File(...),
-    source: Optional[str] = Form(None)
-):
+async def add_image(file: UploadFile = File(...)):
     if not file.content_type.startswith("image/"):
+        print("Файл должен быть изображением.")
         raise HTTPException(status_code=400, detail="Файл должен быть изображением.")
-
-    ext = file.filename.split(".")[-1].lower() if "." in file.filename else "jpg"
+    
+    ext = file.filename.split(".")[-1].lower()
     img_id = str(uuid.uuid4())
-    img_path = UPLOAD_DIR / f"{img_id}.{ext}"
-
-    # Сохраняем файл
+    img_path = Path(UPLOADS_DIR) / f"{img_id}.{ext}"
+    
     try:
         content = await file.read()
         with open(img_path, "wb") as f:
             f.write(content)
     except Exception as e:
+        print(f"Ошибка сохранения файла: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка сохранения файла: {e}")
-
-    # Генерация описания
+    
     try:
-        description = gemini.get_img_description(str(img_path), prompt=config.img2txt_prompt.format(lang=config.lang))
+        description = get_img_description(img_path)
     except Exception as e:
         img_path.unlink(missing_ok=True)
+        print(f"Ошибка генерации описания: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка генерации описания: {e}")
-
-    # print(description)
-    # Получение эмбеддинга
+    
     try:
-        embedding = gemini.get_embedding(description)
+        embedding = get_embedding(description)
     except Exception as e:
         img_path.unlink(missing_ok=True)
+        print(f"Ошибка получения эмбеддинга: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка получения эмбеддинга: {e}")
 
-    # print(embedding)
-    # Сохранение в БД
     try:
-        db.add(
+        db_add(
             ids=[img_id],
             embeddings=[embedding],
             documents=[description],
@@ -79,14 +63,15 @@ async def add_image(
         )
     except Exception as e:
         img_path.unlink(missing_ok=True)
+        print(f"Ошибка сохранения в БД: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка сохранения в БД: {e}")
-
+    
     return {
         "id": img_id,
         "description": description,
         "saved_path": str(img_path)
     }
-
+    
 
 @app.post("/search")
 async def search_images(
@@ -94,31 +79,29 @@ async def search_images(
     n_results: int = Form(5)
 ):
     if not query.strip():
+        print("Запрос не может быть пустым.")
         raise HTTPException(status_code=400, detail="Запрос не может быть пустым.")
 
     try:
-        query_embedding = gemini.get_embedding(query)
+        query_embedding = get_embedding(query)
     except Exception as e:
+        print(f"Ошибка эмбеддинга запроса: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка эмбеддинга запроса: {e}")
 
     try:
-        results = db.search(query_embedding=query_embedding, n_results=n_results)
+        results = db_search(query_embedding=query_embedding, n_results=n_results)
     except Exception as e:
+        print(f"Ошибка поиска: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка поиска: {e}")
+    
 
-    # print(results)
     matches = []
-    # print(len(results["ids"]))
     for i in range(len(results["ids"])):
         img_id = results["ids"][i]
         img_path = results["metadatas"][i]["source"]
 
-        # print(results["ids"][i])
-        # print("p:",img_path)
         if not os.path.isfile(img_path):
-            continue  # пропускаем, если файл отсутствует
-        # print("o:",img_path)
-        # print("===============================")
+            continue  
         matches.append({
             "id": img_id,
             "description": results["documents"][i],
@@ -129,22 +112,40 @@ async def search_images(
 
     return {"results": matches}
 
-
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 @app.get("/image/{filename}")
 async def get_image(filename: str):
-    img = UPLOAD_DIR / filename
-    # print(img)
+    img = Path(UPLOADS_DIR) / filename
     if not os.path.isfile(img):
+        print(f"Изображение не найдено {filename}")
         raise HTTPException(status_code=404, detail="Изображение не найдено")
     return FileResponse(img)
 
-from fastapi.staticfiles import StaticFiles
+@app.get("/", response_class=HTMLResponse)
+async def chroma_page():
+    with open("./index.html") as fd:
+        html_content = fd.read()
+    return HTMLResponse(content=html_content)
 
-app.mount("/", StaticFiles(directory="static",html = True), name="static")
+
+import threading
+import time
+from add_dir import add_dir
 
 if __name__ == "__main__":
+
+    def periodic_add_dir():
+        while True:
+            time.sleep(10)
+            try:
+                add_dir()
+            except Exception as e:
+                print(f"Ошибка в фоновом потоке: {e}")
+                break
+            break
+    background_thread = threading.Thread(target=periodic_add_dir, daemon=True)
+    background_thread.start()
+
     import uvicorn
-    config = Config()
-    uvicorn.run(app, host="0.0.0.0", port=config.port)
+    uvicorn.run(app, port=PORT)

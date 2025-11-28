@@ -4,3 +4,4 @@ uvicorn[standard]
 chromadb
 google-genai
 python-multipart
+python-dotenv

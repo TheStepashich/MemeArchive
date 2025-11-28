@@ -1,4 +1,6 @@
-.env
+venv
 __pycache__
 chroma_db
 uploads
+processed_files.log
+log
