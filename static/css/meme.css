@@ -1,0 +1,111 @@
+/* ===== КНОПКА НАЗАД ===== */
+.btn-back {
+    background: var(--surface);
+    color: var(--text);
+    border: 2px solid var(--border);
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 4px 4px 0px var(--shadow);
+    transition: all 0.1s;
+}
+.btn-back:hover {
+    background: var(--cyan);
+    color: #000;
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0px var(--shadow);
+}
+
+/* ===== СТРАНИЦА МЕМА ===== */
+.main {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.meme {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+    gap: 30px;
+    align-items: start;
+}
+
+.image-panel,
+.info-panel {
+    background: var(--surface);
+    border: 3px solid var(--border);
+    box-shadow: 6px 6px 0px var(--shadow);
+}
+
+.image-panel img {
+    width: 100%;
+    max-height: 75vh;
+    object-fit: contain;
+    display: block;
+    background: var(--surface-2);
+}
+
+.info-panel { padding: 20px; }
+
+.meme-title {
+    font-size: 20px;
+    font-weight: 900;
+    text-transform: uppercase;
+    word-break: break-word;
+    margin-bottom: 16px;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.meme-desc {
+    font-size: 14px;
+    color: var(--text-soft);
+    margin-bottom: 16px;
+    white-space: pre-wrap;
+}
+
+.meme-tags { margin-bottom: 20px; }
+
+.meta {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 10px 14px;
+    font-size: 13px;
+    border-top: 2px dashed var(--border);
+    padding-top: 16px;
+}
+.meta dt { font-weight: 700; text-transform: uppercase; }
+.meta dd { word-break: break-word; }
+
+.state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 60px 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-align: center;
+}
+.state.error { color: var(--magenta); }
+
+/* ===== АДАПТИВНОСТЬ ===== */
+@media (max-width: 860px) {
+    .meme {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .main { padding: 20px 16px; }
+}
+
+@media (max-width: 480px) {
+    .actions .btn { flex: 1 1 40%; }
+    .image-panel img { max-height: 55vh; }
+    .meta { font-size: 12px; }
+}

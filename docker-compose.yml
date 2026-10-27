@@ -1,0 +1,41 @@
+services:
+  meme-archive:
+    build: .
+    image: meme-archive:latest
+    env_file:
+      - .env
+    environment:
+      PORT: 8080
+      CHROMA_DIR: /data/chroma
+      UPLOADS_DIR: /data/uploads
+      MEME_IN_DIR: /memes
+      I2T_PROMPT_FILE: /app/prompt.txt
+      SCAN_INTERVAL: ${SCAN_INTERVAL:-10}
+      SOCKS5_PROXY: ${SOCKS5_PROXY:-}
+      STATS_FILE: /data/stats/stats.json
+      EMBED_CACHE_FILE: /data/cache/embed_cache.db
+    network_mode: host
+    volumes:
+      - chroma_data:/data/chroma
+      - uploads_data:/data/uploads
+      - stats_data:/data/stats
+      - cache_data:/data/cache
+      - "${MEME_IN_DIR:-./memes}:/memes:ro"
+    restart: unless-stopped
+    init: true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  chroma_data:
+  uploads_data:
+  stats_data:
+  cache_data:

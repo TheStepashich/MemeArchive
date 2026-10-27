@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme Archive // ACID</title>
+    <style>
+        /* ===== БАЗОВЫЕ НАСТРОЙКИ ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #E0E7FF;
+            color: #000000;
+            line-height: 1.5;
+        }
+
+        /* ===== ШАПКА (на всю ширину) ===== */
+        .header {
+            background-color: #FFFFFF;
+            border-bottom: 3px solid #000000;
+            padding: 0 40px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            text-decoration: none;
+            color: #000;
+        }
+        .logo span { color: #FF00FF; }
+
+        .search-box {
+            flex: 1;
+            max-width: 500px;
+            margin: 0 40px;
+            position: relative;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 10px 16px;
+            border: 2px solid #000;
+            border-radius: 0;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            background: #F3F4F6;
+        }
+        .search-box input:focus { background: #CCFF00; }
+
+        .btn-add {
+            background-color: #CCFF00;
+            color: #000;
+            border: 2px solid #000;
+            padding: 10px 20px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 4px 4px 0px #000;
+            transition: all 0.1s;
+        }
+        .btn-add:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0px #000; }
+        .btn-add:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px #000; }
+
+        /* ===== ФИЛЬТРЫ (на всю ширину, по центру) ===== */
+        .filters-bar {
+            background-color: #FFFFFF;
+            border-bottom: 3px solid #000;
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .sort-select {
+            padding: 8px 12px;
+            border: 2px solid #000;
+            font-family: inherit;
+            font-weight: bold;
+            background: #FFF;
+            cursor: pointer;
+        }
+
+        .tags-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .tag {
+            padding: 6px 14px;
+            border: 2px solid #000;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            background: #FFF;
+            transition: all 0.1s;
+        }
+        .tag-default:hover { background: #00FFFF; }
+        .tag-active { background: #FF00FF; color: #FFF; }
+
+        /* ===== ОСНОВНОЙ КОНТЕНТ (ограничен шириной 1000px) ===== */
+        .main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .memes-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+        }
+
+        /* ===== КАРТОЧКА МЕМА ===== */
+        .meme-card {
+            background: #FFF;
+            border: 3px solid #000;
+            box-shadow: 6px 6px 0px #000;
+            transition: all 0.1s;
+            cursor: pointer;
+        }
+        .meme-card:hover {
+            transform: translate(-3px, -3px);
+            box-shadow: 9px 9px 0px #000;
+        }
+
+        .meme-image {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            border-bottom: 3px solid #000;
+            display: block;
+            filter: grayscale(20%);
+        }
+        .meme-card:hover .meme-image { filter: grayscale(0%); }
+
+        .meme-content { padding: 16px; }
+        .meme-title {
+            font-size: 18px;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            word-break: break-word;
+        }
+
+        .meme-tags {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .meme-tag {
+            font-size: 11px;
+            padding: 4px 10px;
+            border: 2px solid #000;
+            font-family: inherit;
+            font-weight: 700;
+            background: #E0E7FF;
+        }
+
+        .meme-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 2px dashed #000;
+        }
+        .likes { display: flex; align-items: center; gap: 6px; font-weight: 700; }
+        .likes-icon { color: #FF00FF; font-size: 18px; }
+        .date { font-size: 12px; opacity: 0.7; }
+
+        /* ===== КНОПКА ЗАГРУЗИТЬ ЕЩЁ ===== */
+        .load-more {
+            display: flex;
+            justify-content: center;
+            margin-top: 50px;
+        }
+        .btn-load-more {
+            padding: 14px 32px;
+            border: 3px solid #000;
+            background: #FFF;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px #000;
+            transition: all 0.1s;
+        }
+        .btn-load-more:hover {
+            background: #CCFF00;
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        /* ===== АДАПТИВНОСТЬ ===== */
+        @media (max-width: 1000px) {
+            .memes-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 16px 20px;
+                flex-wrap: wrap;
+                gap: 12px;
+                height: auto;
+            }
+            .search-box {
+                order: 3;
+                margin: 0;
+                max-width: 100%;
+                flex-basis: 100%;
+            }
+            .filters-bar {
+                padding: 12px 20px;
+            }
+            .main {
+                padding: 20px;
+            }
+            .memes-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <a href="#" class="logo">MEME<span>_ARCHIVE</span></a>
+    <div class="search-box">
+        <input type="text" placeholder="ПОИСК МЕМА...">
+    </div>
+    <a href="upload.php" class="btn-add">+ ЗАГРУЗИТЬ</a>
+</header>
+
+<div class="filters-bar">
+    <select class="sort-select">
+        <option>НОВЫЕ ↓</option>
+        <option>ТОП 🔥</option>
+        <option>СТАРЫЕ ↑</option>
+    </select>
+    <div class="tags-list">
+        <span class="tag tag-active">ВСЕ</span>
+        <span class="tag tag-default">2010s</span>
+        <span class="tag tag-default">АБСУРД</span>
+        <span class="tag tag-default">ЖИВОТНЫЕ</span>
+        <span class="tag tag-default">ИГРЫ</span>
+        <span class="tag tag-default">РЕАКЦИИ</span>
+    </div>
+</div>
+
+<main class="main">
+    <div class="memes-grid">
+        
+        <!-- Карточка 1 -->
+        <div class="meme-card">
+            <img src="https://picsum.photos/seed/meme1/400/300" alt="Мем" class="meme-image">
+            <div class="meme-content">
+                <h3 class="meme-title">КОТ, КОТОРЫЙ СМЕЁТСЯ</h3>
+                <div class="meme-tags">
+                    <span class="meme-tag">#животные</span>
+                    <span class="meme-tag">#классика</span>
+                </div>
+                <div class="meme-footer">
+                    <div class="likes">
+                        <span class="likes-icon">♥</span>
+                        <span>1,199</span>
+                    </div>
+                    <span class="date">3 МЕСЯЦА НАЗАД</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Карточка 2 -->
+        <div class="meme-card">
+            <img src="https://picsum.photos/seed/meme2/400/300" alt="Мем" class="meme-image">
+            <div class="meme-content">
+                <h3 class="meme-title">DRAKE ОДОБРЯЕТ</h3>
+                <div class="meme-tags">
+                    <span class="meme-tag">#реакции</span>
+                    <span class="meme-tag">#топ</span>
+                </div>
+                <div class="meme-footer">
+                    <div class="likes">
+                        <span class="likes-icon">♥</span>
+                        <span>3,076</span>
+                    </div>
+                    <span class="date">7 МЕСЯЦЕВ НАЗАД</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Карточка 3 -->
+        <div class="meme-card">
+            <img src="https://picsum.photos/seed/meme3/400/300" alt="Мем" class="meme-image">
+            <div class="meme-content">
+                <h3 class="meme-title">ЭТО ФИАСКО, БРАТАН</h3>
+                <div class="meme-tags">
+                    <span class="meme-tag">#абсурд</span>
+                    <span class="meme-tag">#2010s</span>
+                </div>
+                <div class="meme-footer">
+                    <div class="likes">
+                        <span class="likes-icon">♥</span>
+                        <span>892</span>
+                    </div>
+                    <span class="date">1 ГОД НАЗАД</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Карточка 4 -->
+        <div class="meme-card">
+            <img src="https://picsum.photos/seed/meme4/400/300" alt="Мем" class="meme-image">
+            <div class="meme-content">
+                <h3 class="meme-title">СОБАКА В ГОРЯЩЕМ ДОМЕ</h3>
+                <div class="meme-tags">
+                    <span class="meme-tag">#животные</span>
+                    <span class="meme-tag">#жиза</span>
+                </div>
+                <div class="meme-footer">
+                    <div class="likes">
+                        <span class="likes-icon">♥</span>
+                        <span>2,451</span>
+                    </div>
+                    <span class="date">2 НЕДЕЛИ НАЗАД</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Карточка 5 -->
+        <div class="meme-card">
+            <img src="https://picsum.photos/seed/meme5/400/300" alt="Мем" class="meme-image">
+            <div class="meme-content">
+                <h3 class="meme-title">ОДИН КУСОК НЕ БОЛЬНО</h3>
+                <div class="meme-tags">
+                    <span class="meme-tag">#еда</span>
+                    <span class="meme-tag">#абсурд</span>
+                </div>
+                <div class="meme-footer">
+                    <div class="likes">
+                        <span class="likes-icon">♥</span>
+                        <span>567</span>
+                    </div>
+                    <span class="date">5 ДНЕЙ НАЗАД</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Карточка 6 -->
+        <div class="meme-card">
+            <img src="https://picsum.photos/seed/meme6/400/300" alt="Мем" class="meme-image">
+            <div class="meme-content">
+                <h3 class="meme-title">ЖДУН</h3>
+                <div class="meme-tags">
+                    <span class="meme-tag">#классика</span>
+                    <span class="meme-tag">#2010s</span>
+                </div>
+                <div class="meme-footer">
+                    <div class="likes">
+                        <span class="likes-icon">♥</span>
+                        <span>4,120</span>
+                    </div>
+                    <span class="date">2 ГОДА НАЗАД</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="load-more">
+        <button class="btn-load-more">ЗАГРУЗИТЬ ЕЩЁ ></button>
+    </div>
+</main>
+
+<script>
+    // Переключение тегов
+    document.querySelectorAll('.tag').forEach(tag => {
+        tag.addEventListener('click', function() {
+            document.querySelectorAll('.tag').forEach(t => {
+                t.classList.remove('tag-active');
+                t.classList.add('tag-default');
+            });
+            this.classList.remove('tag-default');
+            this.classList.add('tag-active');
+        });
+    });
+</script>
+
+</body>
+</html>

@@ -1,7 +1,10 @@
-pillow
-fastapi 
-uvicorn[standard]
-chromadb
-google-genai
-python-multipart
-python-dotenv
+chromadb==1.5.9
+fastapi==0.161.1
+google-genai==2.33.0
+httpx[socks]==0.28.1
+pillow==13.0.0
+pydantic-settings==2.16.1
+python-dotenv==1.2.4
+python-multipart==0.0.32
+rapidfuzz==3.14.1
+uvicorn[standard]==0.54.0

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мем — Meme Archive</title>
+    <link rel="stylesheet" href="/static/css/acid.css">
+    <link rel="stylesheet" href="/static/css/meme.css">
+</head>
+
+<body>
+    <header class="header">
+        <a class="logo" href="/">MEME<span>_ARCHIVE</span></a>
+        <a class="btn-back" href="/">← К ЛЕНТЕ</a>
+        <button id="themeToggle" class="theme-toggle" type="button">☾ ТЁМНАЯ</button>
+    </header>
+
+    <main class="main">
+        <div id="loading" class="state">
+            <div class="loader" aria-hidden="true"></div>
+            <span>Загрузка мема...</span>
+        </div>
+
+        <div id="error" class="state error hidden"></div>
+
+        <article id="meme" class="meme hidden">
+            <div class="image-panel">
+                <img id="memeImage" alt="" />
+            </div>
+            <div class="info-panel">
+                <h2 id="title" class="meme-title">Мем</h2>
+                <div class="actions">
+                    <button id="copyBtn" type="button" class="btn">Копировать</button>
+                    <button id="downloadBtn" type="button" class="btn btn-primary">Скачать</button>
+                    <button id="deleteBtn" type="button" class="btn btn-danger">Удалить</button>
+                </div>
+                <p id="description" class="meme-desc"></p>
+                <div id="tags" class="meme-tags"></div>
+                <dl id="meta" class="meta"></dl>
+            </div>
+        </article>
+    </main>
+
+    <div id="toasts" class="toast-container" aria-live="polite"></div>
+
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/meme.js"></script>
+</body>
+
+</html>

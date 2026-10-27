@@ -1,0 +1,217 @@
+/* ===== БАЗА ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --bg: #E0E7FF;
+    --surface: #FFFFFF;
+    --surface-2: #F3F4F6;
+    --text: #000000;
+    --text-soft: #333333;
+    --border: #000000;
+    --shadow: #000000;
+    --tag-bg: #E0E7FF;
+    --lime: #CCFF00;
+    --magenta: #FF00FF;
+    --cyan: #00FFFF;
+}
+
+[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0F0D16;
+    --surface: #1C1928;
+    --surface-2: #262138;
+    --text: #F4F1FF;
+    --text-soft: #BAB2CE;
+    --border: #F2F2F7;
+    --shadow: #B5D74F;
+    --tag-bg: #262138;
+    --lime: #B5D74F;
+    --magenta: #D06FD0;
+    --cyan: #6BC8D8;
+}
+
+::selection { background: var(--lime); color: #000; }
+
+body {
+    font-family: 'Courier New', Courier, monospace;
+    background-color: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+}
+
+button, a { font-family: inherit; }
+
+.hidden { display: none !important; }
+
+/* ===== ШАПКА ===== */
+.header {
+    background-color: var(--surface);
+    border-bottom: 3px solid var(--border);
+    padding: 0 40px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+    text-decoration: none;
+    color: var(--text);
+    white-space: nowrap;
+}
+.logo span { color: var(--magenta); }
+
+/* ===== КНОПКИ ===== */
+.btn {
+    padding: 10px 18px;
+    border: 2px solid var(--border);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 4px 4px 0px var(--shadow);
+    transition: all 0.1s;
+    text-transform: uppercase;
+}
+.btn:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0px var(--shadow); }
+.btn:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px var(--shadow); }
+.btn:disabled { opacity: .5; cursor: default; transform: none; box-shadow: 4px 4px 0px var(--shadow); }
+.btn-primary { background: var(--lime); color: #000; }
+.btn-danger { background: var(--magenta); color: #FFF; }
+
+.theme-toggle {
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 4px 4px 0px var(--shadow);
+    transition: all 0.1s;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.theme-toggle:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0px var(--shadow); }
+.theme-toggle:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px var(--shadow); }
+
+/* ===== ТЕГИ ===== */
+.meme-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.meme-tag {
+    font-size: 11px;
+    padding: 4px 10px;
+    border: 2px solid var(--border);
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--tag-bg);
+    text-transform: uppercase;
+}
+.meme-tag:hover { background: var(--cyan); }
+[data-theme="dark"] .meme-tag:hover { color: #000; }
+
+/* ===== ЛОАДЕР ===== */
+.loader {
+    width: 22px;
+    height: 22px;
+    border: 3px solid var(--border);
+    border-top-color: var(--magenta);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== ТОСТЫ ===== */
+.toast-container {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+}
+.toast {
+    background: #000;
+    color: #FFF;
+    padding: 12px 16px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 4px 4px 0px var(--magenta);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity .2s ease, transform .2s ease;
+    max-width: 340px;
+}
+.toast.visible { opacity: 1; transform: translateY(0); }
+.toast.success { box-shadow: 4px 4px 0px var(--lime); }
+.toast.error { background: var(--magenta); color: #FFF; box-shadow: 4px 4px 0px var(--border); }
+[data-theme="dark"] .toast {
+    background: var(--text);
+    color: #000;
+}
+
+/* ===== АДАПТИВНОСТЬ ===== */
+@media (max-width: 768px) {
+    .header {
+        padding: 12px 16px;
+        gap: 10px;
+        height: auto;
+    }
+    .logo { font-size: 20px; }
+    .btn,
+    .btn-back,
+    .theme-toggle {
+        padding: 8px 12px;
+        font-size: 12px;
+        box-shadow: 3px 3px 0px var(--shadow);
+    }
+    .theme-toggle { padding: 8px 10px; }
+    .theme-label { display: none; }
+    .toast-container {
+        left: 16px;
+        right: 16px;
+    }
+    .toast { max-width: 100%; }
+}
+
+/* ===== КНОПКА ПОИСКА (МОБИЛЬНЫЕ) ===== */
+.search-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    box-shadow: 3px 3px 0px var(--shadow);
+    transition: all 0.1s;
+}
+.search-toggle:hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0px var(--shadow); }
+.search-toggle:active { transform: translate(3px, 3px); box-shadow: 0px 0px 0px var(--shadow); }
+
+@media (max-width: 768px) {
+    .search-toggle { display: flex; }
+    .btn-add-label { display: none; }
+    .btn-add { padding: 8px 14px; }
+}

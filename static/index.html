@@ -2,478 +2,62 @@
 <html lang="ru">
 
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Meme Archive</title>
-    <style>
-        :root {
-            --bg: #fafafa;
-            --card: #fff;
-            --muted: #666;
-            --accent: #007bff;
-            --accent-dark: #0056b3;
-            --success: #28a745;
-            --gray: #e9eef3;
-            --radius: 8px;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-            --container-w: 1200px;
-        }
-
-        html,
-        body {
-            height: 100%
-        }
-
-        body {
-            font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: var(--bg);
-            color: #222;
-            max-width: var(--container-w);
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        h1 {
-            text-align: center;
-            margin: 0 0 20px;
-            font-size: 2rem;
-            color: #222;
-        }
-
-        /* layout */
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 18px;
-        }
-
-        .search-box {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        /* inputs & buttons */
-        input[type="text"],
-        input[type="number"],
-        input[type="file"] {
-            padding: 10px 12px;
-            font-size: 15px;
-            border: 1px solid var(--gray);
-            border-radius: var(--radius);
-            outline: none;
-            background: white;
-        }
-
-        input[type="text"]:focus,
-        input[type="number"]:focus {
-            box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.08);
-            border-color: var(--accent);
-        }
-
-        button {
-            padding: 10px 14px;
-            border: 0;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            background: var(--accent);
-            color: #fff;
-            transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
-        }
-
-        button[type="button"].secondary {
-            background: #6c757d;
-        }
-
-        button[type="button"].success {
-            background: var(--success);
-        }
-
-        button:disabled {
-            opacity: .6;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-        }
-
-        button:hover.secondary {
-            background: #545b62;
-        }
-
-        button:hover.success {
-            background: #218838;
-        }
-
-        /* upload form */
-        .upload-form {
-            display: none;
-            margin-top: 12px;
-            padding: 16px;
-            border-radius: 12px;
-            border: 2px dashed var(--accent);
-            background: #f8f9fb;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .upload-form.visible {
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* results */
-        .results {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 20px;
-            margin-top: 18px;
-        }
-
-        .result-item {
-            background: var(--card);
-            border-radius: 12px;
-            padding: 12px;
-            box-shadow: var(--shadow);
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: stretch;
-            transition: transform .18s ease, box-shadow .18s ease;
-        }
-
-        .result-item:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
-            border-color: var(--accent);
-        }
-
-        .result-item img {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            background: #f5f5f5;
-            display: block;
-        }
-
-        .controls-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .distance {
-            color: var(--muted);
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .loader {
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid var(--accent);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 28px;
-            color: var(--muted);
-            font-size: 16px;
-        }
-
-        label {
-            font-size: 13px;
-            color: #444;
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-
-        @media (max-width:520px) {
-            h1 {
-                font-size: 1.5rem;
-            }
-
-            input[type="text"] {
-                min-width: 160px;
-            }
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme Archive // ACID</title>
+    <link rel="stylesheet" href="/static/css/acid.css">
+    <link rel="stylesheet" href="/static/css/index.css">
 </head>
-
 <body>
-    <h1>Meme Archive</h1>
 
-    <div class="controls">
-        <form id="searchForm" class="search-box" autocomplete="off" onsubmit="return false;">
-            <input type="text" id="queryInput" placeholder="Введите запрос..." value="шиза"
-                aria-label="Поисковой запрос" />
-            <label>
-                <span>n:</span>
-                <input type="number" id="nInput" value="5" min="1" max="50" aria-label="Количество результатов" />
-            </label>
-            <div class="controls-row">
-                <button id="searchBtn" type="button" title="Поиск">🔍</button>
-            </div>
-        </form>
-
-        <div class="controls-row">
-            <button id="addBtn" type="button" class="success">+ добавить</button>
-        </div>
+<header class="header">
+    <a href="/" class="logo">MEME<span>_ARCHIVE</span></a>
+    <button id="searchToggle" class="search-toggle" type="button" aria-label="Поиск" title="Поиск">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="3"/>
+            <line x1="15" y1="15" x2="21" y2="21" stroke="currentColor" stroke-width="3"/>
+        </svg>
+    </button>
+    <div id="searchBox" class="search-box">
+        <input type="text" id="queryInput" placeholder="ПОИСК МЕМА...">
     </div>
+    <button id="addBtn" class="btn-add" type="button">+ <span class="btn-add-label">ЗАГРУЗИТЬ</span></button>
+    <button id="themeToggle" class="theme-toggle" type="button">☾ <span class="theme-label">ТЁМНАЯ</span></button>
+</header>
 
-    <div id="uploadForm" class="upload-form" aria-hidden="true">
+<div class="filters-bar">
+    <select id="sortSelect" class="sort-select">
+        <option value="new">НОВЫЕ ↓</option>
+        <option value="old">СТАРЫЕ ↑</option>
+    </select>
+    <div id="tagsList" class="tags-list"></div>
+    <button id="allTagsBtn" class="tag tag-default" type="button">ВСЕ ТЕГИ ▾</button>
+</div>
+
+<div id="uploadWrap" class="upload-wrap">
+    <div class="upload-form">
         <input id="imageFile" type="file" accept="image/*" />
-        <div style="display:flex; gap:10px; justify-content:center; width:100%;">
-            <button id="uploadBtn" type="button" class="success">Добавить</button>
-            <button id="cancelUploadBtn" type="button" class="secondary">Отмена</button>
+        <input type="text" id="uploadTagsInput" placeholder="теги через запятую" aria-label="Теги изображения" />
+        <div class="upload-row">
+            <button id="uploadBtn" type="button" class="btn btn-primary">Добавить</button>
+            <button id="cancelUploadBtn" type="button" class="btn">Отмена</button>
+            <div id="uploadLoader" class="loader hidden" aria-hidden="true"></div>
         </div>
-        <div id="uploadLoader" class="loader hidden" aria-hidden="true"></div>
     </div>
+</div>
 
-    <div id="searchLoaderContainer" class="hidden" style="display:flex;justify-content:center;margin:16px 0;">
-        <div id="searchLoader" class="loader" aria-hidden="true"></div>
+<main class="main">
+    <div id="searchMeta" class="feed-meta hidden"></div>
+    <div id="results" class="memes-grid" aria-live="polite"></div>
+    <div id="feedSentinel" class="load-more hidden">
+        <button id="loadMoreBtn" class="btn-load-more" type="button">ЗАГРУЗИТЬ ЕЩЁ &gt;</button>
     </div>
+</main>
 
-    <div id="results" class="results" aria-live="polite"></div>
+<div id="toasts" class="toast-container" aria-live="polite"></div>
 
-    <script>
-        // --- лёгкая реактивность (упрощено) ---
-        const el = {
-            queryInput: document.getElementById('queryInput'),
-            nInput: document.getElementById('nInput'),
-            searchBtn: document.getElementById('searchBtn'),
-            addBtn: document.getElementById('addBtn'),
-            uploadForm: document.getElementById('uploadForm'),
-            imageFile: document.getElementById('imageFile'),
-            uploadBtn: document.getElementById('uploadBtn'),
-            cancelUploadBtn: document.getElementById('cancelUploadBtn'),
-            uploadLoader: document.getElementById('uploadLoader'),
-            searchLoaderContainer: document.getElementById('searchLoaderContainer'),
-            resultsDiv: document.getElementById('results')
-        };
+<script src="/static/js/theme.js"></script>
+<script src="/static/js/index.js"></script>
 
-        let isUploading = false;
-        let isSearching = false;
-
-        // --- UI handlers ---
-        el.addBtn.addEventListener('click', () => {
-            el.uploadForm.classList.toggle('visible');
-            el.uploadForm.setAttribute('aria-hidden', el.uploadForm.classList.contains('visible') ? 'false' : 'true');
-        });
-
-        el.cancelUploadBtn.addEventListener('click', () => {
-            el.uploadForm.classList.remove('visible');
-            el.uploadForm.setAttribute('aria-hidden', 'true');
-            el.imageFile.value = '';
-        });
-
-        el.uploadBtn.addEventListener('click', async () => {
-            const file = el.imageFile.files?.[0];
-            if (!file) return alert('Пожалуйста, выберите изображение для загрузки');
-
-            setUploading(true);
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('source', 'web');
-
-            try {
-                const res = await fetch('/add', { method: 'POST', body: formData });
-                if (res.ok) {
-                    alert('✅ Мем успешно добавлен в архив!');
-                    el.imageFile.value = '';
-                    el.uploadForm.classList.remove('visible');
-                    el.uploadForm.setAttribute('aria-hidden', 'true');
-                } else {
-                    let err = {};
-                    try { err = await res.json(); } catch (e) { }
-                    alert('❌ Ошибка при добавлении: ' + (err.detail || res.statusText || 'неизвестная ошибка'));
-                }
-            } catch (err) {
-                console.error('Upload error', err);
-                alert('❌ Ошибка сети при загрузке');
-            } finally {
-                setUploading(false);
-            }
-        });
-
-        function setUploading(v) {
-            isUploading = !!v;
-            el.uploadLoader.classList.toggle('hidden', !isUploading);
-            el.uploadBtn.disabled = isUploading;
-            el.cancelUploadBtn.disabled = isUploading;
-        }
-
-        function setSearching(v) {
-            isSearching = !!v;
-            el.searchLoaderContainer.classList.toggle('hidden', !isSearching);
-            el.searchBtn.disabled = isSearching;
-        }
-
-        // --- поиск ---
-        el.searchBtn.addEventListener('click', performSearch);
-        el.queryInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(); });
-
-        async function performSearch() {
-            const query = el.queryInput.value.trim();
-            const n = Math.max(1, Math.min(50, parseInt(el.nInput.value) || 5));
-            if (!query) return alert('Введите поисковый запрос');
-
-            setSearching(true);
-            renderResults([]);
-
-            try {
-                const res = await fetch('/search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ query, n_results: n })
-                });
-
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                const data = await res.json();
-                renderResults(data.results || []);
-            } catch (err) {
-                console.error('Search error', err);
-                alert('❌ Ошибка при поиске мемов');
-                renderResults([]);
-            } finally {
-                setSearching(false);
-            }
-        }
-
-        // --- рендер результатов ---
-        function renderResults(items) {
-            el.resultsDiv.innerHTML = '';
-            if (!items || items.length === 0) {
-                const empty = document.createElement('div');
-                empty.className = 'empty-state';
-                empty.textContent = isSearching ? 'Поиск...' : 'Ничего не найдено.';
-                el.resultsDiv.appendChild(empty);
-                return;
-            }
-
-            items.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'result-item';
-
-                const img = document.createElement('img');
-                img.src = '/image/' + encodeURIComponent(item.filename || '');
-                img.alt = item.caption || 'Meme';
-                img.loading = 'lazy';
-
-                const distance = document.createElement('div');
-                distance.className = 'distance';
-                distance.textContent = 'distance: ' + (typeof item.distance === 'number' ? item.distance.toFixed(4) : '-');
-
-                const btns = document.createElement('div');
-                btns.style.display = 'flex';
-                btns.style.gap = '8px';
-
-                // Copy button
-                const copyBtn = document.createElement('button');
-                copyBtn.type = 'button';
-                copyBtn.className = 'secondary';
-                copyBtn.textContent = 'Копировать';
-
-                copyBtn.addEventListener('click', async () => {
-                    try {
-                        // Wait for image to load if not yet
-                        if (!img.complete || img.naturalWidth === 0) {
-                            await new Promise((resolve, reject) => {
-                                img.onload = resolve;
-                                img.onerror = reject;
-                            });
-                        }
-
-                        // Attempt to copy as image using canvas (CORS-safe if same-origin)
-                        if (navigator.clipboard && window.ClipboardItem && 'toBlob' in HTMLCanvasElement.prototype) {
-                            const canvas = document.createElement('canvas');
-                            canvas.width = img.naturalWidth;
-                            canvas.height = img.naturalHeight;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0);
-
-                            // Convert to blob
-                            canvas.toBlob(async (blob) => {
-                                if (!blob) {
-                                    throw new Error('Canvas toBlob failed');
-                                }
-                                const item = new ClipboardItem({ [blob.type]: blob });
-                                await navigator.clipboard.write([item]);
-                                // alert('✅ Изображение скопировано!');
-                            }, 'image/png');
-                        } else {
-                            // Fallback: copy URL
-                            await navigator.clipboard.writeText(img.src);
-                            alert('📎 Скопирована ссылка на изображение');
-                        }
-                    } catch (err) {
-                        console.warn('Copy as image failed:', err);
-                        try {
-                            await navigator.clipboard.writeText(img.src);
-                            alert('📎 Скопирована ссылка на изображение');
-                        } catch (e) {
-                            alert('❌ Не удалось скопировать');
-                        }
-                    }
-                });
-
-                // Download button (no <a> wrapper!)
-                const downloadBtn = document.createElement('button');
-                downloadBtn.type = 'button';
-                downloadBtn.textContent = 'Скачать';
-
-                downloadBtn.addEventListener('click', () => {
-                    const a = document.createElement('a');
-                    a.href = img.src;
-                    a.download = item.filename || 'meme.jpg';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                });
-
-                btns.appendChild(copyBtn);
-                btns.appendChild(downloadBtn);
-
-                card.appendChild(img);
-                card.appendChild(distance);
-                card.appendChild(btns);
-
-                el.resultsDiv.appendChild(card);
-            });
-        }
-
-        // инициализация
-        document.addEventListener('DOMContentLoaded', () => {
-            setUploading(false);
-            setSearching(false);
-        });
-    </script>
 </body>
-
 </html>

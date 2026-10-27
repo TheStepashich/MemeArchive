@@ -1,0 +1,14 @@
+{
+  "started_at": "2026-10-26T05:44:06+00:00",
+  "updated_at": "2026-10-26T05:44:07+00:00",
+  "counters": {
+    "embedding_query_calls": 0,
+    "embedding_document_calls": 0,
+    "embedding_errors": 0,
+    "description_calls": 0,
+    "description_errors": 0,
+    "cache_exact_hits": 1,
+    "cache_fuzzy_hits": 0,
+    "cache_misses": 1
+  }
+}
