@@ -30,6 +30,14 @@ def get_collection() -> chromadb.Collection:
     return collection
 
 
+def _clean_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in metadata.items()
+        if not isinstance(value, list) or value
+    }
+
+
 def db_add(
     ids: list[str],
     embeddings: list[list[float]],
@@ -43,7 +51,7 @@ def db_add(
         ids=ids,
         embeddings=embeddings,
         documents=documents,
-        metadatas=metadatas,
+        metadatas=[_clean_metadata(metadata) for metadata in metadatas],
     )
 
 
@@ -67,7 +75,7 @@ def db_delete(ids: list[str]) -> None:
 
 
 def db_update_metadata(image_id: str, metadata: dict[str, Any]) -> None:
-    get_collection().update(ids=[image_id], metadatas=[metadata])
+    get_collection().update(ids=[image_id], metadatas=[_clean_metadata(metadata)])
 
 
 def db_search(

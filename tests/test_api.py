@@ -317,3 +317,62 @@ def test_stats(monkeypatch, tmp_path):
         assert saved["counters"]["embedding_query_calls"] == 1
         assert saved["counters"]["embedding_document_calls"] == 1
         assert saved["counters"]["cache_exact_hits"] == 1
+
+
+def test_folder_scan_style_add_without_tags(monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "uploads_dir", tmp_path / "uploads")
+    monkeypatch.setattr(settings, "chroma_dir", tmp_path / "chroma")
+    monkeypatch.setattr(settings, "meme_in_dir", tmp_path / "memes")
+    monkeypatch.setattr(settings, "scan_interval", 0)
+
+    descriptions = iter(
+        [
+            "Cat with a hat sits at an office desk.\ncat, office, irony",
+            "Dog walks through a park on a leash.",
+        ]
+    )
+
+    monkeypatch.setattr(
+        ai,
+        "get_img_description",
+        lambda path: next(descriptions, "Uncaptioned meme image."),
+    )
+    monkeypatch.setattr(ai, "get_embedding", lambda text, task_type: [1.0, 0.0, 0.0])
+
+    db.get_collection.cache_clear()
+
+    from app.main import app
+
+    with TestClient(app) as client:
+        tagged = client.post(
+            "/add",
+            files={"file": ("cat.png", png_bytes(), "image/png")},
+        )
+        assert tagged.status_code == 200, tagged.text
+        added = tagged.json()
+        assert added["tags"] == ["cat", "office", "irony"]
+
+        plain_response = client.post(
+            "/add",
+            files={"file": ("dog.png", png_bytes(color=(255, 0, 0)), "image/png")},
+        )
+        assert plain_response.status_code == 200, plain_response.text
+        plain = plain_response.json()
+        assert plain["tags"] == []
+        assert plain["id"] != added["id"]
+
+        assert client.get("/tags").json() == ["cat", "irony", "office"]
+
+        by_tag = client.get("/images", params={"limit": 10, "tags": ["cat"]}).json()
+        assert by_tag["total"] == 1
+        assert [r["id"] for r in by_tag["results"]] == [added["id"]]
+
+        listing = client.get("/images", params={"limit": 10}).json()
+        assert listing["total"] == 2
+
+        filtered = client.post("/search", json={"query": "cat", "tags": ["cat"]}).json()
+        assert [r["description"] for r in filtered["results"]] == [added["description"]]
+
+        favorite = client.patch(f"/images/{plain['id']}/favorite", json={"favorite": True})
+        assert favorite.status_code == 200, favorite.text
+        assert favorite.json()["tags"] == []

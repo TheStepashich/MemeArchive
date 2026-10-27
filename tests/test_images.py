@@ -5,6 +5,7 @@ from PIL import Image
 
 from app.errors import ImageValidationError, NotFoundError, PayloadTooLargeError
 from app.images import (
+    extract_tags,
     inspect_image,
     metadata_tags,
     parse_tags,
@@ -74,6 +75,44 @@ def test_parse_tags_accepts_iterable():
 
 def test_metadata_tags_supports_legacy_string():
     assert metadata_tags({"tags": "a, b"}) == ["a", "b"]
+
+
+def test_extract_tags_reads_keyword_line():
+    description = "Cat with a hat sits at an office desk.\ncat, office, irony"
+
+    assert extract_tags(description) == ["cat", "office", "irony"]
+
+
+def test_extract_tags_caps_at_three():
+    assert extract_tags("Paragraph text.\na, b, c, d") == ["a", "b", "c"]
+
+
+def test_extract_tags_accepts_single_keyword():
+    assert extract_tags("Paragraph text here.\ncats") == ["cats"]
+
+
+def test_extract_tags_strips_bullet_and_label():
+    description = "Paragraph text here.\n\n  - Keywords: cat, dog  "
+
+    assert extract_tags(description) == ["cat", "dog"]
+
+
+def test_extract_tags_ignores_single_line_description():
+    assert extract_tags("funny cat, office, work") == []
+
+
+def test_extract_tags_ignores_wrapped_prose():
+    description = (
+        "First line of a long paragraph that keeps\n"
+        "going and going, and even more words here, ending abruptly"
+    )
+
+    assert extract_tags(description) == []
+
+
+def test_extract_tags_handles_missing_description():
+    assert extract_tags(None) == []
+    assert extract_tags("") == []
 
 
 def test_safe_original_filename_strips_paths():

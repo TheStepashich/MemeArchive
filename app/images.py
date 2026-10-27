@@ -25,6 +25,13 @@ ALLOWED_EXTENSIONS = {ext for ext, _ in ALLOWED_FORMATS.values()}
 _TAG_RE = re.compile(r"[^\w\s+.-]", flags=re.UNICODE)
 _MAX_TAGS = 20
 _MAX_TAG_LENGTH = 50
+_MAX_AUTO_TAGS = 3
+_MAX_AUTO_SEGMENT_WORDS = 4
+_MAX_AUTO_SEGMENT_LENGTH = 40
+_BULLET_RE = re.compile(r"^[\s>*\-–—]+")
+_LABEL_RE = re.compile(r"^(?:[^\s,;:]{1,24}[ \t]+){0,2}[^\s,;:]{1,24}\s*[:–—]\s*")
+_SENTENCE_END_RE = re.compile(r"[.!?…]+$")
+_WORD_RE = re.compile(r"\S+")
 
 
 @dataclass(frozen=True)
@@ -119,6 +126,43 @@ def parse_tags(tags: str | Iterable[str] | None) -> list[str]:
         if len(result) >= _MAX_TAGS:
             break
     return result
+
+
+def _keyword_line(lines: list[str]) -> str:
+    line = _LABEL_RE.sub("", _BULLET_RE.sub("", lines[-1])).strip()
+    if not line or _SENTENCE_END_RE.search(line):
+        return ""
+
+    segments = [segment.strip(" -–—*·") for segment in line.split(",")]
+    segments = [segment for segment in segments if segment]
+    if not segments or len(segments) > _MAX_AUTO_TAGS * 2:
+        return ""
+
+    if len(segments) == 1:
+        if len(line) > _MAX_TAG_LENGTH or len(_WORD_RE.findall(line)) > _MAX_AUTO_TAGS:
+            return ""
+        return line
+
+    for segment in segments:
+        if len(segment) > _MAX_AUTO_SEGMENT_LENGTH:
+            return ""
+        if len(_WORD_RE.findall(segment)) > _MAX_AUTO_SEGMENT_WORDS:
+            return ""
+    return line
+
+
+def extract_tags(description: str | None) -> list[str]:
+    if not description:
+        return []
+
+    lines = [line.strip() for line in description.splitlines() if line.strip()]
+    if len(lines) < 2:
+        return []
+
+    line = _keyword_line(lines)
+    if not line:
+        return []
+    return parse_tags(line)[:_MAX_AUTO_TAGS]
 
 
 def image_path_from_metadata(metadata: dict[str, Any] | None) -> Path:

@@ -14,6 +14,7 @@ from app.config import settings
 from app.errors import NotFoundError
 from app.images import (
     ImageInfo,
+    extract_tags,
     image_path_from_metadata,
     inspect_image,
     metadata_tags,
@@ -137,7 +138,7 @@ def add_image(
             info=info,
             stored_name=stored_name,
             original_filename=safe_original_filename(original_filename),
-            tags=parse_tags(tags),
+            tags=parse_tags([*parse_tags(tags), *extract_tags(description)]),
             favorite=favorite,
         )
         db.db_add(
@@ -161,7 +162,7 @@ def _metadata(
     tags: list[str],
     favorite: bool,
 ) -> dict[str, Any]:
-    return {
+    metadata = {
         "source": str(settings.uploads_dir / stored_name),
         "stored_name": stored_name,
         "original_filename": original_filename,
@@ -170,10 +171,12 @@ def _metadata(
         "width": info.width,
         "height": info.height,
         "size": info.size,
-        "tags": tags,
         "favorite": favorite,
         "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
     }
+    if tags:
+        metadata["tags"] = tags
+    return metadata
 
 
 def get_image(image_id: str) -> dict[str, Any]:

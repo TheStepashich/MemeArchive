@@ -1,5 +1,9 @@
+import io
 
-from app import ingest
+from PIL import Image
+
+from app import ai, db, ingest, service
+from app.config import settings
 from app.errors import ImageValidationError
 
 
@@ -31,3 +35,41 @@ def test_add_dir_continues_after_errors(tmp_path, monkeypatch):
 
 def test_iter_image_files_handles_missing_dir(tmp_path):
     assert list(ingest.iter_image_files(tmp_path / "missing")) == []
+
+
+def test_add_dir_indexes_images_without_explicit_tags(tmp_path, monkeypatch):
+    buffer = io.BytesIO()
+    Image.new("RGB", (8, 8), color=(0, 128, 255)).save(buffer, format="PNG")
+    (tmp_path / "cat.png").write_bytes(buffer.getvalue())
+
+    buffer2 = io.BytesIO()
+    Image.new("RGB", (8, 8), color=(255, 0, 0)).save(buffer2, format="PNG")
+    (tmp_path / "dog.png").write_bytes(buffer2.getvalue())
+
+    descriptions = iter(
+        [
+            "Cat with a hat sits at an office desk.\ncat, office, irony",
+            "Dog walks through a park on a leash.",
+        ]
+    )
+
+    monkeypatch.setattr(settings, "uploads_dir", tmp_path / "uploads")
+    monkeypatch.setattr(settings, "chroma_dir", tmp_path / "chroma")
+    monkeypatch.setattr(settings, "meme_in_dir", tmp_path)
+    monkeypatch.setattr(
+        ai, "get_img_description", lambda path: next(descriptions, "Uncaptioned image.")
+    )
+    monkeypatch.setattr(ai, "get_embedding", lambda text, task_type: [1.0, 0.0, 0.0])
+
+    db.get_collection.cache_clear()
+
+    stats = ingest.add_dir()
+
+    assert stats["seen"] == 2
+    assert stats["added"] == 2
+    assert stats["failed"] == 0
+
+    tags = {
+        tuple(service.get_image(image_id)["tags"]) for image_id in db.db_get_all()["ids"]
+    }
+    assert tags == {("cat", "office", "irony"), ()}
