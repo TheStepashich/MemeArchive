@@ -156,7 +156,7 @@ const el = {
             el.uploadTagsInput.value = '';
             el.uploadWrap.classList.remove('visible');
             if (data.pending) {
-                const until = data.expires_at ? formatDate(data.expires_at) : '';
+                const until = data.expires_at ? formatFeedDate(data.expires_at) : '';
                 toast(until ? 'Мем на модерации до ' + until : 'Мем отправлен на модерацию', 'success');
             } else {
                 toast(data.duplicate ? 'Такой мем уже есть в архиве' : 'Мем добавлен в архив', 'success');
