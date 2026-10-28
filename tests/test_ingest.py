@@ -4,7 +4,7 @@ from PIL import Image
 
 from app import ai, db, ingest, service
 from app.config import settings
-from app.errors import ImageValidationError
+from app.errors import ImageValidationError, UpstreamAIError
 
 
 def test_add_dir_continues_after_errors(tmp_path, monkeypatch):
@@ -73,3 +73,43 @@ def test_add_dir_indexes_images_without_explicit_tags(tmp_path, monkeypatch):
         tuple(service.get_image(image_id)["tags"]) for image_id in db.db_get_all()["ids"]
     }
     assert tags == {("cat", "office", "irony"), ()}
+def test_add_dir_aborts_after_upstream_streak(tmp_path, monkeypatch):
+    for index in range(10):
+        (tmp_path / f"meme-{index}.png").write_bytes(b"data")
+
+    attempts: list[str] = []
+
+    def fake_add_image(data, original_filename, tags=None, favorite=False):
+        attempts.append(original_filename)
+        raise UpstreamAIError("429 Too Many Requests")
+
+    monkeypatch.setattr(ingest.settings, "meme_in_dir", tmp_path)
+    monkeypatch.setattr(ingest.settings, "upstream_failure_streak", 3)
+    monkeypatch.setattr(ingest.service, "add_image", fake_add_image)
+
+    stats = ingest.add_dir()
+
+    assert stats["aborted"] == 1
+    assert stats["failed"] == 3
+    assert stats["seen"] == 3
+    assert len(attempts) == 3
+
+
+def test_add_dir_keeps_scanning_on_local_errors(tmp_path, monkeypatch):
+    for index in range(10):
+        (tmp_path / f"meme-{index}.png").write_bytes(b"data")
+
+    attempts: list[str] = []
+
+    def fake_add_image(data, original_filename, tags=None, favorite=False):
+        attempts.append(original_filename)
+        raise ImageValidationError("not an image")
+
+    monkeypatch.setattr(ingest.settings, "meme_in_dir", tmp_path)
+    monkeypatch.setattr(ingest.service, "add_image", fake_add_image)
+
+    stats = ingest.add_dir()
+
+    assert not stats.get("aborted")
+    assert stats["failed"] == 10
+    assert len(attempts) == 10

@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     max_upload_mb: int = Field(default=25, ge=1, le=200)
     max_image_pixels: int = Field(default=40_000_000, ge=1_000_000)
     scan_interval: int = Field(default=10, ge=0)
+    scan_backoff_max: int = Field(default=1800, ge=10)
+    upstream_failure_streak: int = Field(default=5, ge=1, le=100)
+    gemini_retry_attempts: int = Field(default=5, ge=1, le=20)
     log_level: str = "INFO"
     cors_origins: str = "*"
     socks5_proxy: str | None = None

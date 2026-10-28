@@ -9,7 +9,11 @@ def test_http_options_without_proxy(monkeypatch):
     monkeypatch.setattr(ai.settings, "socks5_proxy", None)
     ai.get_http_options.cache_clear()
 
-    assert ai.get_http_options() is None
+    options = ai.get_http_options()
+    assert options.client_args is None
+    assert options.retry_options is not None
+    assert options.retry_options.attempts == ai.settings.gemini_retry_attempts
+    assert 429 not in options.retry_options.http_status_codes
 
 
 def test_http_options_with_proxy(monkeypatch):

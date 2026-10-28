@@ -301,7 +301,7 @@ def search(
         tag_results = tag_data["results"]
         exclude_ids = {item["id"] for item in tag_results}
 
-    query_embedding = ai.get_embedding(query, settings.embedding_task_query)
+    query_embedding = ai.get_embedding(query, settings.embedding_task_query, bypass_delay=True)
     semantic = _semantic_results(
         query_embedding,
         normalized_tags,

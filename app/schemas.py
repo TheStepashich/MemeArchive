@@ -94,8 +94,10 @@ class StatsResponse(BaseModel):
     embedding_query_calls: int
     embedding_document_calls: int
     embedding_errors: int
+    embedding_rate_limits: int
     description_calls: int
     description_errors: int
+    description_rate_limits: int
     cache_exact_hits: int
     cache_fuzzy_hits: int
     cache_misses: int

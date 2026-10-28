@@ -33,7 +33,7 @@ def test_full_flow(monkeypatch, tmp_path):
 
     embedding_calls: list[str] = []
 
-    def fake_embedding(text: str, task_type: str) -> list[float]:
+    def fake_embedding(text: str, task_type: str, bypass_delay: bool = False) -> list[float]:
         embedding_calls.append(text)
         if "dog" in text:
             return [0.0, 1.0, 0.0]
@@ -210,7 +210,7 @@ def test_bot_api(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "scan_interval", 0)
     monkeypatch.setattr(settings, "bot_api_token", "secret")
     monkeypatch.setattr(ai, "get_img_description", lambda path: "funny cat")
-    monkeypatch.setattr(ai, "get_embedding", lambda text, task_type: [1.0, 0.0, 0.0])
+    monkeypatch.setattr(ai, "get_embedding", lambda text, task_type, bypass_delay=False: [1.0, 0.0, 0.0])
 
     db.get_collection.cache_clear()
 
@@ -269,7 +269,7 @@ def test_stats(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "stats_file", tmp_path / "stats" / "stats.json")
     monkeypatch.setattr(ai, "get_img_description", lambda path: "funny cat")
 
-    def fake_embed(normalized: str, task_type: str, model: str) -> list[float]:
+    def fake_embed(normalized: str, task_type: str, model: str, bypass_delay: bool = False) -> list[float]:
         stats_mod.incr(
             "embedding_document_calls"
             if task_type == settings.embedding_task_document
@@ -337,7 +337,7 @@ def test_folder_scan_style_add_without_tags(monkeypatch, tmp_path):
         "get_img_description",
         lambda path: next(descriptions, "Uncaptioned meme image."),
     )
-    monkeypatch.setattr(ai, "get_embedding", lambda text, task_type: [1.0, 0.0, 0.0])
+    monkeypatch.setattr(ai, "get_embedding", lambda text, task_type, bypass_delay=False: [1.0, 0.0, 0.0])
 
     db.get_collection.cache_clear()
 
