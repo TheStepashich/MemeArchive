@@ -28,6 +28,7 @@ const el = {
     let order = 'new';
     let selectedTags = new Set();
     let feedOffset = 0;
+    let feedTotal = 0;
     let feedLoading = false;
     let feedHasMore = true;
     let feedController = null;
@@ -207,6 +208,7 @@ const el = {
             });
 
             feedOffset = data.next_offset;
+            feedTotal = data.total;
             feedHasMore = items.length > 0 && feedOffset < data.total;
 
             el.searchMeta.textContent = `Загружено: ${feedOffset} из ${data.total}`;
@@ -237,6 +239,43 @@ const el = {
             loadFeed(false);
         }
     }
+
+    const TOTAL_POLL_MS = 15000;
+    let totalPollBusy = false;
+
+    async function refreshFeedTotal() {
+        if (mode !== 'feed' || document.hidden || totalPollBusy) return;
+        totalPollBusy = true;
+        try {
+            const res = await fetch('/health', { cache: 'no-store' });
+            if (!res.ok) return;
+            const data = await res.json();
+            const total = Number(data.images);
+            if (!Number.isFinite(total) || total === feedTotal) return;
+
+            const wasEmpty = feedOffset === 0 && feedTotal === 0;
+            feedTotal = total;
+            if (wasEmpty) {
+                loadFeed(true);
+                return;
+            }
+            feedHasMore = feedOffset < feedTotal;
+            if (feedOffset > 0) {
+                el.searchMeta.textContent = `Загружено: ${feedOffset} из ${feedTotal}`;
+                el.searchMeta.classList.remove('hidden');
+            }
+            updateFeedSentinel();
+        } catch (err) {
+            console.debug('Feed total poll failed', err);
+        } finally {
+            totalPollBusy = false;
+        }
+    }
+
+    setInterval(refreshFeedTotal, TOTAL_POLL_MS);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshFeedTotal();
+    });
 
     async function performSearch() {
         const query = el.queryInput.value.trim();
