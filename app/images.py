@@ -20,7 +20,7 @@ ALLOWED_FORMATS = {
     "BMP": ("bmp", "image/bmp"),
     "GIF": ("gif", "image/gif"),
 }
-ALLOWED_EXTENSIONS = {ext for ext, _ in ALLOWED_FORMATS.values()}
+ALLOWED_EXTENSIONS = {ext for ext, _ in ALLOWED_FORMATS.values()} | {"jpeg"}
 
 _TAG_RE = re.compile(r"[^\w\s+.-]", flags=re.UNICODE)
 _MAX_TAGS = 20

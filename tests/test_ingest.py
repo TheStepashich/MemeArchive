@@ -37,6 +37,15 @@ def test_iter_image_files_handles_missing_dir(tmp_path):
     assert list(ingest.iter_image_files(tmp_path / "missing")) == []
 
 
+def test_iter_image_files_accepts_jpeg_suffix(tmp_path):
+    for name in ("a.jpg", "b.jpeg", "c.JPEG", "d.png", "e.mp4", "noext"):
+        (tmp_path / name).write_bytes(b"x")
+
+    names = [path.name for path in ingest.iter_image_files(tmp_path)]
+
+    assert names == ["a.jpg", "b.jpeg", "c.JPEG", "d.png"]
+
+
 def test_add_dir_indexes_images_without_explicit_tags(tmp_path, monkeypatch):
     buffer = io.BytesIO()
     Image.new("RGB", (8, 8), color=(0, 128, 255)).save(buffer, format="PNG")
