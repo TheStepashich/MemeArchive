@@ -13,7 +13,10 @@
 - Пагинация ленты и поиска (`limit`/`offset`).
 - Массовый импорт из папки с фоновым сканированием.
 - Защита от 429: пауза по retryDelay, до 3 повторов на запрос; после 5 ошибок подряд проход прерывается, а сканирование уходит в экспоненциальный backoff (до `SCAN_BACKOFF_MAX`).
-- Удаление записей и файлов.
+- Капча на загрузку (собственная отрисовка через Pillow, без внешних сервисов).
+- Модерация загрузок: мем попадает в очередь, админ получает уведомление в Telegram, через час публикуется автоматически, если его не отклонили.
+- Админка `/admin`: статистика, очередь модерации, публикация/отклонение и удаление мемов по токену.
+- Удаление записей и файлов только для администратора.
 - Переиндексация при смене модели эмбеддингов.
 - Docker Compose.
 
@@ -27,17 +30,24 @@ app/
   db.py          ChromaDB
   service.py     бизнес-логика
   images.py      валидация изображений, безопасные пути, теги
+  captcha.py     отрисовка и проверка капчи
+  pending.py     очередь модерации на диске
+  moderation.py  приём, публикация и авто-публикация загрузок
+  telegram.py    уведомления администратору
   ingest.py      импорт из папки
   scheduler.py   фоновый импорт
   reindex.py     CLI переиндексации
 static/
   index.html     лента и поиск
   meme.html      страница мема
+  admin.html     админка
   css/acid.css   общие стили (шапка, кнопки, тосты)
   css/index.css  стили ленты
   css/meme.css   стили страницы мема
+  css/admin.css  стили админки
   js/index.js    скрипт ленты
   js/meme.js     скрипт страницы мема
+  js/admin.js    скрипт админки
   js/theme.js    переключатель темы (автодетект системной)
 tests/
 ```
@@ -78,6 +88,14 @@ uv pip install --python .venv/bin/python -r requirements-dev.txt
 | `CORS_ORIGINS` | разрешённые origin через запятую | `*` |
 | `SOCKS5_PROXY` | SOCKS5-прокси для запросов к Gemini, например `socks5h://host:1080` | — |
 | `BOT_API_TOKEN` | токен для `/api/v1` (X-API-Key или Bearer). Если пуст — доступ без авторизации | — |
+| `ADMIN_TOKEN` | токен админки `/admin` и `/api/v1/admin/*` (X-API-Key или Bearer). Если пуст — админка отключена | — |
+| `CAPTCHA_ENABLED` | капча на `/add` | `true` |
+| `CAPTCHA_TTL_SECONDS` | срок жизни капчи, сек | `300` |
+| `PENDING_TTL_SECONDS` | задержка публикации, сек (0 — публиковать сразу) | `3600` |
+| `PENDING_CHECK_INTERVAL` | период проверки очереди модерации, сек | `15` |
+| `MAX_PENDING_ITEMS` | максимум мемов в очереди модерации | `100` |
+| `TELEGRAM_BOT_TOKEN` | токен бота для уведомлений о новых мемах | — |
+| `TELEGRAM_ADMIN_CHAT_ID` | chat id администратора для уведомлений | — |
 | `STATS_FILE` | файл статистики вызовов Gemini и кэша эмбеддингов | `./stats.json` |
 | `EMBED_CACHE_FILE` | SQLite-файл персистентного кэша эмбеддингов | `./embed_cache.db` |
 
@@ -140,8 +158,12 @@ docker compose up -d
 # healthcheck
 curl http://localhost:8080/health
 
-# загрузка
+# капча: id и PNG в data URI
+curl http://localhost:8080/captcha
+
+# загрузка (при включённой капче нужны captcha_id и captcha_answer)
 curl -F "file=@meme.jpg" -F "tags=кот,работа" -F "favorite=false" \
+  -F "captcha_id=<id>" -F "captcha_answer=<код>" \
   http://localhost:8080/add
 
 # поиск (JSON)
@@ -164,13 +186,41 @@ curl http://localhost:8080/tags
 # статистика Gemini и кэша
 curl http://localhost:8080/stats
 
-# избранное
+# избранное (нужен токен администратора)
 curl -X PATCH http://localhost:8080/images/<id>/favorite \
+  -H "X-API-Key: $ADMIN_TOKEN" \
   -H "Content-Type: application/json" -d '{"favorite":true}'
 
-# удаление
-curl -X DELETE http://localhost:8080/images/<id>
+# удаление (нужен токен администратора)
+curl -X DELETE -H "X-API-Key: $ADMIN_TOKEN" \
+  http://localhost:8080/images/<id>
 ```
+
+Если `PENDING_TTL_SECONDS` больше нуля, `/add` возвращает `202` и запись с `pending: true` и `expires_at`; файл лежит в `UPLOADS_DIR/pending`, а в архив и поиск попадёт после публикации. При `0` поведение прежнее — мем индексируется сразу (`200`).
+
+## Модерация и админка
+
+1. Посетитель проходит капчу и загружает мем.
+2. Мем сохраняется в очередь, администратору приходит фото в Telegram (если заданы `TELEGRAM_BOT_TOKEN` и `TELEGRAM_ADMIN_CHAT_ID`).
+3. Через `PENDING_TTL_SECONDS` (по умолчанию час) мем публикуется автоматически: Gemini строит описание и эмбеддинг, запись появляется в ленте и поиске.
+4. Администратор может опубликовать или отклонить мем раньше на странице `/admin`.
+
+Админка открывается по адресу `/admin`. Введите `ADMIN_TOKEN` — он хранится только в `sessionStorage` вкладки. На странице видны счётчики (включая паузу Gemini после 429), очередь с обратным отсчётом, последние мемы с удалением и удаление по id.
+
+Админские эндпоинты (заголовок `X-API-Key` или `Authorization: Bearer <ADMIN_TOKEN>`):
+
+```bash
+curl -H "X-API-Key: $ADMIN_TOKEN" http://localhost:8080/api/v1/admin/stats
+curl -H "X-API-Key: $ADMIN_TOKEN" http://localhost:8080/api/v1/admin/pending
+curl -X POST -H "X-API-Key: $ADMIN_TOKEN" \
+  http://localhost:8080/api/v1/admin/pending/<id>/approve
+curl -X POST -H "X-API-Key: $ADMIN_TOKEN" \
+  http://localhost:8080/api/v1/admin/pending/<id>/reject
+curl -X DELETE -H "X-API-Key: $ADMIN_TOKEN" \
+  http://localhost:8080/api/v1/admin/memes/<id>
+```
+
+Пока действует пауза после исчерпания квоты Gemini, автопубликация ждёт: мемы остаются в очереди, а импорт из папки пропускается до окончания паузы.
 
 ## API для Telegram-бота
 
@@ -220,5 +270,7 @@ curl -H "X-API-Key: $BOT_API_TOKEN" \
 
 - `.env` исключён из git. Если ключ когда-либо попадал в историю, перевыпустите его и очистите историю (`git filter-repo`).
 - Загружаемые файлы проверяются Pillow по содержимому, а не по расширению.
+- Публичная загрузка защищена капчей; IP-адреса не сохраняются ни в очереди, ни в статистике.
+- Удаление, избранное и админские методы требуют `ADMIN_TOKEN`; без него админка отвечает `503`.
 - Имена файлов на диске — SHA-256, доступ к `/image/{filename}` защищён от path traversal.
 - Ошибки клиенту отдаются без внутренних деталей, подробности пишутся в лог.

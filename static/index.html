@@ -38,6 +38,11 @@
     <div class="upload-form">
         <input id="imageFile" type="file" accept="image/*" />
         <input type="text" id="uploadTagsInput" placeholder="теги через запятую" aria-label="Теги изображения" />
+        <div id="captchaRow" class="captcha-row hidden">
+            <img id="captchaImage" class="captcha-image" alt="Код проверки" />
+            <button id="captchaRefreshBtn" type="button" class="btn captcha-refresh" title="Другой код">&#8635;</button>
+            <input type="text" id="captchaInput" placeholder="код с картинки" aria-label="Код с картинки" autocomplete="off" spellcheck="false" />
+        </div>
         <div class="upload-row">
             <button id="uploadBtn" type="button" class="btn btn-primary">Добавить</button>
             <button id="cancelUploadBtn" type="button" class="btn">Отмена</button>

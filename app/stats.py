@@ -22,6 +22,11 @@ COUNTER_KEYS = (
     "cache_exact_hits",
     "cache_fuzzy_hits",
     "cache_misses",
+    "uploads_received",
+    "uploads_manual_approved",
+    "uploads_auto_approved",
+    "uploads_rejected",
+    "captcha_failures",
 )
 
 _lock = threading.Lock()

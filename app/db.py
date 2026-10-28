@@ -130,13 +130,18 @@ def db_list(limit: int, offset: int = 0, where: dict[str, Any] | None = None) ->
     }
 
 
-def db_get_random() -> dict[str, Any] | None:
+def db_get_random(where: dict[str, Any] | None = None) -> dict[str, Any] | None:
     collection = get_collection()
-    total = collection.count()
+    total = db_count(where)
     if total == 0:
         return None
     offset = random.randint(0, total - 1)
-    result = collection.get(limit=1, offset=offset, include=["documents", "metadatas"])
+    result = collection.get(
+        limit=1,
+        offset=offset,
+        where=where,
+        include=["documents", "metadatas"],
+    )
     ids = result.get("ids") or []
     if not ids:
         return None
@@ -173,6 +178,25 @@ def db_get_embedding(image_id: str) -> list[float] | None:
         return [float(v) for v in first]
     except (TypeError, ValueError):
         return None
+
+
+def migrate_pending_flag() -> int:
+    collection = get_collection()
+    result = collection.get(include=["metadatas"])
+    ids = result.get("ids") or []
+    metadatas = result.get("metadatas") or []
+    missing_ids: list[str] = []
+    missing_metadatas: list[dict[str, Any]] = []
+    for image_id, metadata in zip(ids, metadatas):
+        metadata = metadata or {}
+        if "pending" in metadata:
+            continue
+        missing_ids.append(image_id)
+        missing_metadatas.append({**metadata, "pending": False})
+    if missing_ids:
+        collection.update(ids=missing_ids, metadatas=missing_metadatas)
+        logger.info("Проставлен флаг pending=false у %d записей", len(missing_ids))
+    return len(missing_ids)
 
 
 def db_get_all() -> dict[str, Any]:

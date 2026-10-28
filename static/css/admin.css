@@ -1,0 +1,233 @@
+.admin-main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.card {
+    background: var(--surface);
+    border: 3px solid var(--border);
+    box-shadow: 6px 6px 0 var(--shadow);
+    padding: 24px;
+}
+
+.login-card {
+    max-width: 560px;
+    margin: 40px auto 0;
+}
+.login-card h1 {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+.login-card p {
+    color: var(--text-soft);
+    margin-bottom: 18px;
+    font-size: 14px;
+}
+.login-card code {
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+}
+.login-form {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.login-form input {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 14px;
+    border: 2px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+}
+.login-form input:focus { background: var(--lime); color: #000; }
+.login-error {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    background: var(--magenta);
+    color: #FFF;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+.section-head h2 {
+    font-size: 22px;
+    text-transform: uppercase;
+    letter-spacing: -0.5px;
+}
+.section-note {
+    font-size: 12px;
+    color: var(--text-soft);
+    font-weight: 700;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+}
+.stat {
+    border: 2px solid var(--border);
+    background: var(--surface);
+    box-shadow: 4px 4px 0 var(--shadow);
+    padding: 12px 14px;
+}
+.stat-value {
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1.2;
+    word-break: break-word;
+}
+.stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-soft);
+    margin-top: 4px;
+}
+.stat.accent { background: var(--lime); color: #000; }
+.stat.accent .stat-label { color: #222; }
+
+.pending-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.pending-card {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    border: 3px solid var(--border);
+    background: var(--surface);
+    box-shadow: 6px 6px 0 var(--shadow);
+    padding: 14px;
+}
+.pending-thumb {
+    width: 180px;
+    height: 140px;
+    border: 2px solid var(--border);
+    background: var(--surface-2);
+    object-fit: contain;
+    flex-shrink: 0;
+}
+.pending-body {
+    flex: 1;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.pending-name {
+    font-weight: 900;
+    word-break: break-all;
+}
+.pending-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.pending-tag {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+}
+.pending-meta {
+    font-size: 12px;
+    color: var(--text-soft);
+}
+.pending-countdown {
+    font-weight: 900;
+    font-size: 14px;
+}
+.pending-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: auto;
+}
+
+.empty {
+    border: 2px dashed var(--border);
+    padding: 18px;
+    text-align: center;
+    color: var(--text-soft);
+    font-size: 14px;
+}
+
+.delete-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.delete-row input {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font-family: inherit;
+    outline: none;
+}
+
+.memes-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+}
+.meme-admin {
+    border: 2px solid var(--border);
+    background: var(--surface);
+    box-shadow: 4px 4px 0 var(--shadow);
+    display: flex;
+    flex-direction: column;
+}
+.meme-admin img {
+    width: 100%;
+    height: 150px;
+    object-fit: contain;
+    background: var(--surface-2);
+    border-bottom: 2px solid var(--border);
+}
+.meme-admin-body {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+.meme-admin-title {
+    font-size: 11px;
+    color: var(--text-soft);
+    word-break: break-all;
+}
+.meme-admin .btn-danger {
+    padding: 8px 10px;
+    font-size: 12px;
+    margin-top: auto;
+}
+
+@media (max-width: 640px) {
+    .admin-main { padding: 20px 12px 60px; }
+    .pending-thumb { width: 100%; height: 200px; }
+    .section-head { flex-wrap: wrap; }
+}

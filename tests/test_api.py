@@ -8,6 +8,8 @@ from PIL import Image
 from app import ai, db
 from app.config import settings
 
+ADMIN_HEADERS = {"X-API-Key": "test-admin"}
+
 
 def png_bytes(color: tuple[int, int, int] = (0, 128, 255)) -> bytes:
     buffer = io.BytesIO()
@@ -106,6 +108,7 @@ def test_full_flow(monkeypatch, tmp_path):
         favorite = client.patch(
             f"/images/{added['id']}/favorite",
             json={"favorite": True},
+            headers=ADMIN_HEADERS,
         ).json()
         assert favorite["favorite"] is True
 
@@ -115,6 +118,7 @@ def test_full_flow(monkeypatch, tmp_path):
         unmarked = client.patch(
             f"/images/{added['id']}/favorite",
             json={"favorite": False},
+            headers=ADMIN_HEADERS,
         ).json()
         assert unmarked["favorite"] is False
 
@@ -192,9 +196,9 @@ def test_full_flow(monkeypatch, tmp_path):
         assert len(random_tags) == 2
         assert set(random_tags) <= {"cat", "dog", "home", "office", "work"}
 
-        deleted_second = client.delete(f"/images/{second['id']}")
+        deleted_second = client.delete(f"/images/{second['id']}", headers=ADMIN_HEADERS)
         assert deleted_second.status_code == 200
-        deleted = client.delete(f"/images/{added['id']}")
+        deleted = client.delete(f"/images/{added['id']}", headers=ADMIN_HEADERS)
         assert deleted.status_code == 200
         assert client.post("/search", json={"query": "cat"}).json()["results"] == []
 
@@ -373,6 +377,10 @@ def test_folder_scan_style_add_without_tags(monkeypatch, tmp_path):
         filtered = client.post("/search", json={"query": "cat", "tags": ["cat"]}).json()
         assert [r["description"] for r in filtered["results"]] == [added["description"]]
 
-        favorite = client.patch(f"/images/{plain['id']}/favorite", json={"favorite": True})
+        favorite = client.patch(
+            f"/images/{plain['id']}/favorite",
+            json={"favorite": True},
+            headers=ADMIN_HEADERS,
+        )
         assert favorite.status_code == 200, favorite.text
         assert favorite.json()["tags"] == []

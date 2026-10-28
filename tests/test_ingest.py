@@ -13,7 +13,7 @@ def test_add_dir_continues_after_errors(tmp_path, monkeypatch):
 
     calls = []
 
-    def fake_add_image(data, original_filename, tags=None, favorite=False):
+    def fake_add_image(data, original_filename, tags=None, favorite=False, added_via="web"):
         calls.append(original_filename)
         if original_filename == "bad.png":
             raise ImageValidationError("broken")
@@ -88,7 +88,7 @@ def test_add_dir_aborts_after_upstream_streak(tmp_path, monkeypatch):
 
     attempts: list[str] = []
 
-    def fake_add_image(data, original_filename, tags=None, favorite=False):
+    def fake_add_image(data, original_filename, tags=None, favorite=False, added_via="web"):
         attempts.append(original_filename)
         raise UpstreamAIError("429 Too Many Requests")
 
@@ -110,7 +110,7 @@ def test_add_dir_keeps_scanning_on_local_errors(tmp_path, monkeypatch):
 
     attempts: list[str] = []
 
-    def fake_add_image(data, original_filename, tags=None, favorite=False):
+    def fake_add_image(data, original_filename, tags=None, favorite=False, added_via="web"):
         attempts.append(original_filename)
         raise ImageValidationError("not an image")
 

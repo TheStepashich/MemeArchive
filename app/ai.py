@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+import math
 import re
+import threading
 import time
 from collections import OrderedDict
 from functools import lru_cache
@@ -44,6 +46,32 @@ _RETRY_HUMAN_RE = re.compile(r"retry in (?:(\d+)h)?(?:(\d+)m)?(?:([\d.]+)s)?")
 # Бюджет повторов при 429: не зацикливаемся навсегда на исчерпанной квоте
 _MAX_RATE_LIMIT_RETRIES = 3
 _MAX_RATE_LIMIT_SLEEP = 900
+
+_block_lock = threading.Lock()
+_blocked_until: dict[str, float] = {"description": 0.0, "embedding": 0.0}
+
+
+def _mark_blocked(kind: str, seconds: int) -> None:
+    until = time.monotonic() + max(0, seconds)
+    with _block_lock:
+        _blocked_until[kind] = max(_blocked_until[kind], until)
+
+
+def _clear_blocked(kind: str) -> None:
+    with _block_lock:
+        _blocked_until[kind] = 0.0
+
+
+def reset_blocked() -> None:
+    with _block_lock:
+        _blocked_until["description"] = 0.0
+        _blocked_until["embedding"] = 0.0
+
+
+def upstream_blocked_seconds() -> int:
+    with _block_lock:
+        until = max(_blocked_until.values())
+    return max(0, math.ceil(until - time.monotonic()))
 
 if (restored := embed_cache.load_into(_EMBED_CACHE)) > 0:
     logger.info("Кэш эмбеддингов восстановлен с диска: %d записей", restored)
@@ -132,6 +160,7 @@ def get_img_description(image_path: Path) -> str:
                         "Gemini 429 budget exhausted (%d retries, next pause %ds), giving up this call",
                         rate_limit_retries, sleep_secs,
                     )
+                    _mark_blocked("description", sleep_secs)
                     raise UpstreamAIError("Не удалось получить описание изображения.") from exc
                 logger.warning(
                     "Превышен лимит запросов Gemini API (429) для %s. Динамическая пауза: %d сек (%d мин). Ждем...",
@@ -148,6 +177,7 @@ def get_img_description(image_path: Path) -> str:
             logger.exception("Gemini image description failed for %s", image_path)
             raise UpstreamAIError("Не удалось получить описание изображения.") from exc
 
+    _clear_blocked("description")
     description = (response.text or "").strip()
     if not description:
         stats.incr("description_errors")
@@ -230,6 +260,7 @@ def _embed_uncached(normalized: str, task_type: str, model: str, bypass_delay: b
                         "Gemini 429 budget exhausted (%d retries, next pause %ds), giving up this call",
                         rate_limit_retries, sleep_secs,
                     )
+                    _mark_blocked("embedding", sleep_secs)
                     raise UpstreamAIError("Не удалось построить эмбеддинг.") from exc
                 logger.warning(
                     "Превышен лимит эмбеддингов Gemini API (429). Динамическая пауза: %d сек (%d мин). Ждем...",
@@ -245,6 +276,7 @@ def _embed_uncached(normalized: str, task_type: str, model: str, bypass_delay: b
             logger.exception("Gemini embedding failed")
             raise UpstreamAIError("Не удалось построить эмбеддинг.") from exc
 
+    _clear_blocked("embedding")
     embeddings = response.embeddings or []
     if not embeddings or not embeddings[0].values:
         stats.incr("embedding_errors")

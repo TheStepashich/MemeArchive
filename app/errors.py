@@ -10,8 +10,16 @@ class ImageValidationError(AppError):
     status_code = 400
 
 
+class CaptchaError(AppError):
+    status_code = 400
+
+
 class PayloadTooLargeError(AppError):
     status_code = 413
+
+
+class TooManyRequestsError(AppError):
+    status_code = 429
 
 
 class NotFoundError(AppError):

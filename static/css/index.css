@@ -116,6 +116,32 @@
 }
 .upload-form input[type="text"]:focus { background: var(--lime); color: #000; }
 
+.captcha-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.captcha-row .captcha-image {
+    height: 64px;
+    width: auto;
+    border: 2px solid var(--border);
+    background: var(--surface-2);
+    image-rendering: auto;
+}
+.captcha-row .captcha-refresh {
+    padding: 10px 14px;
+    font-size: 18px;
+    line-height: 1;
+}
+.captcha-row input[type="text"] {
+    flex: 1;
+    min-width: 160px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-weight: 700;
+}
+
 .upload-row {
     display: flex;
     gap: 12px;

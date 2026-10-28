@@ -39,6 +39,8 @@ class ImageRecord(BaseModel):
     created_at: str | None = None
     distance: float | None = None
     duplicate: bool = False
+    pending: bool = False
+    expires_at: str | None = None
 
 
 class ImageListResponse(BaseModel):
@@ -86,6 +88,8 @@ class HealthResponse(BaseModel):
     uploads_dir: str
     meme_in_dir: str
     meme_in_dir_available: bool
+    pending: int = 0
+    upstream_blocked_for: int = 0
 
 
 class StatsResponse(BaseModel):
@@ -106,3 +110,41 @@ class StatsResponse(BaseModel):
     cache_size: int
     gemini_calls: int
     gemini_errors: int
+    uploads_received: int
+    uploads_manual_approved: int
+    uploads_auto_approved: int
+    uploads_rejected: int
+    captcha_failures: int
+
+
+class AdminStatsResponse(StatsResponse):
+    images: int
+    pending_count: int
+    upstream_blocked_for: int
+
+
+class PendingItem(BaseModel):
+    id: str
+    original_filename: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    size: int | None = None
+    width: int | None = None
+    height: int | None = None
+    mime_type: str | None = None
+    created_at: str | None = None
+    expires_at: str | None = None
+    seconds_left: int = 0
+    image_url: str
+
+
+class PendingListResponse(BaseModel):
+    items: list[PendingItem]
+    total: int
+    max_items: int
+
+
+class PublicConfigResponse(BaseModel):
+    captcha_enabled: bool
+    captcha_ttl_seconds: int
+    pending_enabled: bool
+    pending_ttl_seconds: int

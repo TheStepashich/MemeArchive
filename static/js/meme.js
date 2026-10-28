@@ -13,7 +13,6 @@ const imageId = decodeURIComponent(
             meta: document.getElementById('meta'),
             copyBtn: document.getElementById('copyBtn'),
             downloadBtn: document.getElementById('downloadBtn'),
-            deleteBtn: document.getElementById('deleteBtn'),
             toasts: document.getElementById('toasts')
         };
 
@@ -169,18 +168,5 @@ const imageId = decodeURIComponent(
             anchor.remove();
         });
 
-        el.deleteBtn.addEventListener('click', async () => {
-            if (!item) return;
-            if (!confirm('Удалить этот мем из архива?')) return;
-            el.deleteBtn.disabled = true;
-            try {
-                const res = await fetch('/images/' + encodeURIComponent(item.id), { method: 'DELETE' });
-                if (!res.ok) throw new Error(await readError(res));
-                window.location.href = '/';
-            } catch (err) {
-                toast('Не удалось удалить: ' + err.message, 'error');
-                el.deleteBtn.disabled = false;
-            }
-        });
 
         load();

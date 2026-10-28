@@ -5,7 +5,7 @@ from collections import Counter
 from collections.abc import Iterator
 from pathlib import Path
 
-from app import service
+from app import ai, service
 from app.config import settings
 from app.errors import AppError, UpstreamAIError
 from app.images import ALLOWED_EXTENSIONS
@@ -33,10 +33,16 @@ def add_dir() -> Counter:
     folder = settings.meme_in_dir
     streak = 0
 
+    blocked = ai.upstream_blocked_seconds()
+    if blocked > 0:
+        stats["aborted"] += 1
+        logger.info("Gemini недоступен ещё %d сек, импорт отложен", blocked)
+        return stats
+
     for path in iter_image_files(folder):
         stats["seen"] += 1
         try:
-            result = service.add_image(path.read_bytes(), path.name)
+            result = service.add_image(path.read_bytes(), path.name, added_via="folder")
         except UpstreamAIError as exc:
             logger.warning("Не удалось обработать %s: %s", path.name, exc.message)
             stats["failed"] += 1

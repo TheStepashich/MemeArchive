@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Админка — Meme Archive</title>
+    <link rel="stylesheet" href="/static/css/acid.css" />
+    <link rel="stylesheet" href="/static/css/admin.css" />
+</head>
+<body>
+<header class="header">
+    <a class="logo" href="/">MEME<span>_ADMIN</span></a>
+    <a class="btn" href="/">НА ГЛАВНУЮ</a>
+</header>
+
+<main class="admin-main">
+    <section id="loginCard" class="card login-card">
+        <h1>АДМИНКА</h1>
+        <p>Введите токен администратора из <code>ADMIN_TOKEN</code>. Он хранится только в этой вкладке.</p>
+        <form id="loginForm" class="login-form">
+            <input id="tokenInput" type="password" placeholder="токен администратора" autocomplete="current-password" />
+            <button type="submit" class="btn btn-primary">ВОЙТИ</button>
+        </form>
+        <div id="loginError" class="login-error hidden"></div>
+    </section>
+
+    <section id="panel" class="hidden">
+        <div class="section-head">
+            <h2>СТАТИСТИКА</h2>
+            <span id="statsUpdated" class="section-note"></span>
+        </div>
+        <div id="statsGrid" class="stats-grid"></div>
+
+        <div class="section-head">
+            <h2>НА МОДЕРАЦИИ</h2>
+            <span id="pendingMeta" class="section-note"></span>
+        </div>
+        <div id="pendingList" class="pending-list"></div>
+
+        <div class="section-head">
+            <h2>ПОСЛЕДНИЕ МЕМЫ</h2>
+            <button id="logoutBtn" type="button" class="btn">ВЫЙТИ</button>
+        </div>
+        <div class="delete-row">
+            <input id="deleteId" type="text" placeholder="id мема" autocomplete="off" />
+            <button id="deleteIdBtn" type="button" class="btn btn-danger">УДАЛИТЬ ПО ID</button>
+        </div>
+        <div id="memesList" class="memes-list"></div>
+    </section>
+</main>
+
+<div id="toasts" class="toast-container" aria-live="polite"></div>
+
+<script src="/static/js/theme.js"></script>
+<script src="/static/js/admin.js"></script>
+</body>
+</html>

@@ -12,6 +12,10 @@ const el = {
         uploadBtn: document.getElementById('uploadBtn'),
         cancelUploadBtn: document.getElementById('cancelUploadBtn'),
         uploadLoader: document.getElementById('uploadLoader'),
+        captchaRow: document.getElementById('captchaRow'),
+        captchaImage: document.getElementById('captchaImage'),
+        captchaInput: document.getElementById('captchaInput'),
+        captchaRefreshBtn: document.getElementById('captchaRefreshBtn'),
         searchMeta: document.getElementById('searchMeta'),
         resultsDiv: document.getElementById('results'),
         feedSentinel: document.getElementById('feedSentinel'),
@@ -33,6 +37,8 @@ const el = {
     let feedHasMore = true;
     let feedController = null;
     let searchController = null;
+    let captchaEnabled = false;
+    let captchaId = null;
 
     function toast(message, type = 'info') {
         const node = document.createElement('div');
@@ -79,6 +85,36 @@ const el = {
         isSearching = !!value;
     }
 
+    async function refreshCaptcha() {
+        if (!captchaEnabled) return;
+        try {
+            const res = await fetch('/captcha', { cache: 'no-store' });
+            if (!res.ok) throw new Error(await readError(res));
+            const data = await res.json();
+            captchaId = data.id;
+            el.captchaImage.src = data.image;
+            el.captchaInput.value = '';
+        } catch (err) {
+            console.error('Captcha error', err);
+            captchaId = null;
+            toast('Не удалось загрузить капчу: ' + err.message, 'error');
+        }
+    }
+
+    async function loadPublicConfig() {
+        try {
+            const res = await fetch('/config', { cache: 'no-store' });
+            if (!res.ok) return;
+            const data = await res.json();
+            captchaEnabled = !!data.captcha_enabled;
+            el.captchaRow.classList.toggle('hidden', !captchaEnabled);
+        } catch (err) {
+            console.error('Config error', err);
+        }
+    }
+
+    el.captchaRefreshBtn.addEventListener('click', refreshCaptcha);
+
     el.addBtn.addEventListener('click', () => {
         el.uploadWrap.classList.toggle('visible');
     });
@@ -87,6 +123,7 @@ const el = {
         el.uploadWrap.classList.remove('visible');
         el.imageFile.value = '';
         el.uploadTagsInput.value = '';
+        if (captchaEnabled) refreshCaptcha();
     });
 
     el.uploadBtn.addEventListener('click', async () => {
@@ -95,11 +132,19 @@ const el = {
             toast('Выберите изображение для загрузки', 'error');
             return;
         }
+        if (captchaEnabled && !el.captchaInput.value.trim()) {
+            toast('Введите код с картинки', 'error');
+            return;
+        }
 
         setUploading(true);
         const formData = new FormData();
         formData.append('file', file);
         formData.append('tags', el.uploadTagsInput.value);
+        if (captchaEnabled) {
+            formData.append('captcha_id', captchaId || '');
+            formData.append('captcha_answer', el.captchaInput.value.trim());
+        }
 
         try {
             const res = await fetch('/add', { method: 'POST', body: formData });
@@ -107,17 +152,23 @@ const el = {
                 throw new Error(await readError(res));
             }
             const data = await res.json();
-            toast(data.duplicate ? 'Такой мем уже есть в архиве' : 'Мем добавлен в архив', 'success');
             el.imageFile.value = '';
             el.uploadTagsInput.value = '';
             el.uploadWrap.classList.remove('visible');
-            await refreshTagChips();
-            if (mode === 'feed') loadFeed(true);
+            if (data.pending) {
+                const until = data.expires_at ? formatDate(data.expires_at) : '';
+                toast(until ? 'Мем на модерации до ' + until : 'Мем отправлен на модерацию', 'success');
+            } else {
+                toast(data.duplicate ? 'Такой мем уже есть в архиве' : 'Мем добавлен в архив', 'success');
+                await refreshTagChips();
+                if (mode === 'feed') loadFeed(true);
+            }
         } catch (err) {
             console.error('Upload error', err);
             toast('Ошибка при добавлении: ' + err.message, 'error');
         } finally {
             setUploading(false);
+            if (captchaEnabled) refreshCaptcha();
         }
     });
 
@@ -605,6 +656,8 @@ const el = {
             selectedTags = new Set(saved.selectedTags || []);
         }
 
+        await loadPublicConfig();
+        if (captchaEnabled) await refreshCaptcha();
         await refreshTagChips();
 
         if (urlQuery) {

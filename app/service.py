@@ -74,6 +74,7 @@ def _build_record(
         "created_at": created_at,
         "distance": distance,
         "duplicate": duplicate,
+        "pending": bool(metadata.get("pending", False)),
     }
 
 
@@ -99,6 +100,7 @@ def add_image(
     original_filename: str | None,
     tags: str | Iterable[str] | None = None,
     favorite: bool = False,
+    added_via: str = "web",
 ) -> dict[str, Any]:
     info = inspect_image(data)
     existing = _existing_record(info.content_hash)
@@ -140,6 +142,7 @@ def add_image(
             original_filename=safe_original_filename(original_filename),
             tags=parse_tags([*parse_tags(tags), *extract_tags(description)]),
             favorite=favorite,
+            added_via=added_via,
         )
         db.db_add(
             ids=[info.content_hash],
@@ -161,6 +164,7 @@ def _metadata(
     original_filename: str,
     tags: list[str],
     favorite: bool,
+    added_via: str = "web",
 ) -> dict[str, Any]:
     metadata = {
         "source": str(settings.uploads_dir / stored_name),
@@ -172,11 +176,21 @@ def _metadata(
         "height": info.height,
         "size": info.size,
         "favorite": favorite,
+        "pending": False,
+        "added_via": added_via,
         "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
     }
     if tags:
         metadata["tags"] = tags
     return metadata
+
+
+def find_image(image_id: str) -> dict[str, Any] | None:
+    existing = _existing_record(image_id)
+    if existing is None:
+        return None
+    description, metadata = existing
+    return _build_record(image_id, description, metadata)
 
 
 def get_image(image_id: str) -> dict[str, Any]:
@@ -209,8 +223,14 @@ def set_favorite(image_id: str, favorite: bool) -> dict[str, Any]:
     return _build_record(image_id, description, metadata)
 
 
-def _build_where(tags: list[str], favorite: bool | None) -> dict[str, Any] | None:
+def _build_where(
+    tags: list[str],
+    favorite: bool | None,
+    pending: bool | None = False,
+) -> dict[str, Any] | None:
     clauses: list[dict[str, Any]] = []
+    if pending is not None:
+        clauses.append({"pending": pending})
     if favorite is not None:
         clauses.append({"favorite": favorite})
     for tag in tags:
@@ -241,11 +261,12 @@ def _semantic_results(
     n_results: int,
     offset: int,
     exclude_ids: set[str] | None = None,
+    pending: bool | None = False,
 ) -> list[dict[str, Any]]:
     raw = db.db_search(
         query_embedding=query_embedding,
         n_results=n_results,
-        where=_build_where(normalized_tags, favorite),
+        where=_build_where(normalized_tags, favorite, pending),
         offset=offset,
     )
 
@@ -281,6 +302,7 @@ def search(
     offset: int = 0,
     tags: Iterable[str] | None = None,
     favorite: bool | None = None,
+    pending: bool | None = False,
 ) -> dict[str, Any]:
     normalized_tags = parse_tags(tags)
 
@@ -290,13 +312,14 @@ def search(
 
     if matched_tag is not None:
         effective_tags = parse_tags([matched_tag, *normalized_tags])
-        where = _build_where(effective_tags, favorite)
+        where = _build_where(effective_tags, favorite, pending)
         tag_data = list_images(
             limit=max(db.db_count(where), 1),
             offset=0,
             order="new",
             tags=effective_tags,
             favorite=favorite,
+            pending=pending,
         )
         tag_results = tag_data["results"]
         exclude_ids = {item["id"] for item in tag_results}
@@ -309,12 +332,13 @@ def search(
         n_results,
         offset,
         exclude_ids,
+        pending,
     )
 
     return {
         "query": query,
         "results": [*tag_results, *semantic],
-        "total": db.db_count(),
+        "total": db.db_count(_build_where([], None, pending)),
         "n_results": n_results,
         "offset": offset,
         "matched_tag": matched_tag,
@@ -328,10 +352,11 @@ def list_images(
     order: str = "new",
     tags: Iterable[str] | None = None,
     favorite: bool | None = None,
+    pending: bool | None = False,
 ) -> dict[str, Any]:
     if favorite is None:
         favorite = True if order == "top" else None
-    where = _build_where(parse_tags(tags), favorite)
+    where = _build_where(parse_tags(tags), favorite, pending)
     total = db.db_count(where)
     take = min(limit, max(0, total - offset))
 
@@ -367,8 +392,8 @@ def list_images(
     }
 
 
-def get_random_image() -> dict[str, Any]:
-    record = db.db_get_random()
+def get_random_image(pending: bool | None = False) -> dict[str, Any]:
+    record = db.db_get_random(where=_build_where([], None, pending))
     if record is None:
         raise NotFoundError("В архиве нет мемов.")
     metadata = record.get("metadata") or {}
@@ -392,7 +417,11 @@ def get_similar_images(image_id: str, n_results: int = 5) -> dict[str, Any]:
         description, metadata = existing
         embedding = ai.get_embedding(description, settings.embedding_task_query)
 
-    raw = db.db_search(embedding, n_results=n_results + 1)
+    raw = db.db_search(
+        embedding,
+        n_results=n_results + 1,
+        where=_build_where([], None, False),
+    )
     results: list[dict[str, Any]] = []
     for mid, document, metadata, distance in zip(
         raw["ids"], raw["documents"], raw["metadatas"], raw["distances"]
@@ -417,6 +446,8 @@ def list_tags(limit: int | None = None) -> list[str]:
     data = db.db_get_all()
     tags: dict[str, str] = {}
     for metadata in data["metadatas"]:
+        if (metadata or {}).get("pending", False):
+            continue
         for tag in metadata_tags(metadata):
             tags.setdefault(tag.casefold(), tag)
     all_tags = sorted(tags.values(), key=str.casefold)

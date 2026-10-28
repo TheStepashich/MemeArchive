@@ -42,6 +42,14 @@ class Settings(BaseSettings):
     cors_origins: str = "*"
     socks5_proxy: str | None = None
     bot_api_token: str | None = None
+    admin_token: str | None = None
+    telegram_bot_token: str | None = None
+    telegram_admin_chat_id: str | None = None
+    captcha_enabled: bool = True
+    captcha_ttl_seconds: int = Field(default=300, ge=30, le=3600)
+    pending_ttl_seconds: int = Field(default=3600, ge=0, le=604800)
+    pending_check_interval: int = Field(default=15, ge=5, le=300)
+    max_pending_items: int = Field(default=100, ge=1, le=10000)
 
     embedding_task_document: str = "RETRIEVAL_DOCUMENT"
     embedding_task_query: str = "RETRIEVAL_QUERY"
@@ -61,9 +69,15 @@ class Settings(BaseSettings):
             value = (BASE_DIR / value).resolve()
         return value
 
-    @field_validator("bot_api_token", mode="before")
+    @field_validator(
+        "bot_api_token",
+        "admin_token",
+        "telegram_bot_token",
+        "telegram_admin_chat_id",
+        mode="before",
+    )
     @classmethod
-    def _validate_bot_api_token(cls, value: object) -> str | None:
+    def _validate_optional_token(cls, value: object) -> str | None:
         if value is None:
             return None
         token = str(value).strip()
@@ -86,6 +100,14 @@ class Settings(BaseSettings):
         return self.max_upload_mb * 1024 * 1024
 
     @property
+    def pending_enabled(self) -> bool:
+        return self.pending_ttl_seconds > 0
+
+    @property
+    def pending_dir(self) -> Path:
+        return self.uploads_dir / "pending"
+
+    @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
@@ -95,6 +117,7 @@ class Settings(BaseSettings):
 
     def ensure_dirs(self) -> None:
         self.uploads_dir.mkdir(parents=True, exist_ok=True)
+        self.pending_dir.mkdir(parents=True, exist_ok=True)
         self.chroma_dir.mkdir(parents=True, exist_ok=True)
         self.stats_file.parent.mkdir(parents=True, exist_ok=True)
         self.embed_cache_file.parent.mkdir(parents=True, exist_ok=True)
