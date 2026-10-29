@@ -164,6 +164,10 @@ def test_full_flow(monkeypatch, tmp_path):
         assert top["total"] == 1
         assert [r["id"] for r in top["results"]] == [second["id"]]
 
+        random_order = client.get("/images", params={"limit": 10, "order": "random"}).json()
+        assert random_order["total"] == 2
+        assert len(random_order["results"]) == 2
+
         by_tag = client.get("/images", params={"limit": 10, "tags": ["dog"]}).json()
         assert by_tag["total"] == 1
         assert [r["id"] for r in by_tag["results"]] == [second["id"]]

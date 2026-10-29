@@ -406,7 +406,7 @@ def bot_stats() -> StatsResponse:
 def list_images(
     limit: Annotated[int, Query(ge=1, le=100)] = 24,
     offset: Annotated[int, Query(ge=0)] = 0,
-    order: Annotated[str, Query(pattern="^(new|old|top)$")] = "new",
+    order: Annotated[str, Query(pattern="^(new|old|top|random)$")] = "new",
     tags: Annotated[list[str] | None, Query()] = None,
 ) -> ImageListResponse:
     return ImageListResponse(**service.list_images(limit=limit, offset=offset, order=order, tags=tags))

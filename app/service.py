@@ -363,6 +363,9 @@ def list_images(
     if take:
         if order == "old":
             raw = db.db_list(limit=take, offset=offset, where=where)
+        elif order == "random":
+            raw = db.db_list(limit=take, offset=random.randint(0, max(0, total - take)), where=where)
+            raw = {key: list(reversed(value)) for key, value in raw.items()}
         else:
             raw = db.db_list(limit=take, offset=total - offset - take, where=where)
             raw = {key: list(reversed(value)) for key, value in raw.items()}
