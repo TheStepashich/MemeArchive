@@ -12,11 +12,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 from app.config import settings
 
-_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
-_CODE_LENGTH = 5
 _WIDTH = 280
 _HEIGHT = 96
 _FONT_SIZE = 52
+_TEXT_SIZE = 34
 
 _FONT_CANDIDATES = (
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
@@ -29,22 +28,98 @@ _INKS = ("#000000", "#7C3AED", "#0EA5E9", "#DB2777", "#65A30D")
 _store: dict[str, tuple[str, float]] = {}
 _lock = threading.Lock()
 
+_ONES = ("", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять")
+_TEENS = (
+    "десять",
+    "одиннадцать",
+    "двенадцать",
+    "тринадцать",
+    "четырнадцать",
+    "пятнадцать",
+    "шестнадцать",
+    "семнадцать",
+    "восемнадцать",
+    "девятнадцать",
+)
+_TENS = (
+    "",
+    "",
+    "двадцать",
+    "тридцать",
+    "сорок",
+    "пятьдесят",
+    "шестьдесят",
+    "семьдесят",
+    "восемьдесят",
+    "девяносто",
+)
+_HUNDREDS = (
+    "",
+    "сто",
+    "двести",
+    "триста",
+    "четыреста",
+    "пятьсот",
+    "шестьсот",
+    "семьсот",
+    "восемьсот",
+    "девятьсот",
+)
+_GROUP_NAMES = ("", "тысяча", "миллион")
 
-def _font() -> ImageFont.ImageFont:
+
+def _font(size: int = _TEXT_SIZE) -> ImageFont.ImageFont:
     for candidate in _FONT_CANDIDATES:
         if Path(candidate).is_file():
-            return ImageFont.truetype(candidate, _FONT_SIZE)
+            return ImageFont.truetype(candidate, size)
     try:
-        return ImageFont.load_default(size=_FONT_SIZE)
+        return ImageFont.load_default(size=size)
     except TypeError:
         return ImageFont.load_default()
 
 
-def _random_code() -> str:
-    return "".join(secrets.choice(_ALPHABET) for _ in range(_CODE_LENGTH))
+def _sub_hundred(chunk: int) -> str:
+    if chunk <= 0:
+        return ""
+    if chunk < 10:
+        return _ONES[chunk]
+    if chunk < 20:
+        return _TEENS[chunk - 10]
+    return f"{_TENS[chunk // 10]} {_ONES[chunk % 10]}".strip()
 
 
-def _render(code: str) -> bytes:
+def _number_to_words(number: int) -> str:
+    if number <= 0:
+        return "ноль"
+    parts: list[str] = []
+    group = number
+    group_index = 0
+    while group > 0:
+        chunk = group % 1000
+        if chunk > 0:
+            words: list[str] = []
+            if chunk >= 100:
+                words.append(_HUNDREDS[chunk // 100])
+                remainder = chunk % 100
+            else:
+                remainder = chunk
+            sub = _sub_hundred(remainder)
+            if sub:
+                words.append(sub)
+            if _GROUP_NAMES[group_index]:
+                words.append(_GROUP_NAMES[group_index])
+            parts.append(" ".join(words))
+        group //= 1000
+        group_index += 1
+    return " ".join(reversed(parts))
+
+
+def _random_answer() -> str:
+    return str(random.randint(100, 99999))
+
+
+def _render(answer: str) -> bytes:
+    text = _number_to_words(int(answer))
     background = random.choice(_BACKGROUNDS)
     image = Image.new("RGB", (_WIDTH, _HEIGHT), background)
     draw = ImageDraw.Draw(image)
@@ -53,25 +128,15 @@ def _render(code: str) -> bytes:
         points = [(random.randint(0, _WIDTH), random.randint(0, _HEIGHT)) for _ in range(3)]
         draw.line(points, fill=random.choice(_INKS), width=random.choice((1, 1, 2)))
     for _ in range(140):
-        draw.point(
-            (random.randint(0, _WIDTH), random.randint(0, _HEIGHT)),
-            fill=random.choice(_INKS),
-        )
+        draw.point((random.randint(0, _WIDTH), random.randint(0, _HEIGHT)), fill=random.choice(_INKS))
 
     font = _font()
-    spacing = (_WIDTH - 40) // _CODE_LENGTH
-    offset_x = 18
-    for char in code:
-        glyph = Image.new("RGBA", (spacing + 12, _HEIGHT), (0, 0, 0, 0))
-        glyph_draw = ImageDraw.Draw(glyph)
-        glyph_draw.text((8, 18), char, font=font, fill=random.choice(_INKS))
-        glyph = glyph.rotate(
-            random.uniform(-18, 18),
-            resample=Image.Resampling.BICUBIC,
-            expand=False,
-        )
-        image.paste(glyph, (offset_x, random.randint(-4, 6) + 16), glyph)
-        offset_x += spacing
+    box = font.getbbox(text)
+    text_width = box[2] - box[0]
+    text_height = box[3] - box[1]
+    x = int((_WIDTH - text_width) / 2 - box[0])
+    y = int((_HEIGHT - text_height) / 2 - box[1])
+    draw.text((x, y), text, font=font, fill=random.choice(_INKS))
 
     draw.rectangle((0, 0, _WIDTH - 1, _HEIGHT - 1), outline="#000000", width=3)
 
@@ -82,7 +147,7 @@ def _render(code: str) -> bytes:
 
 def new_challenge() -> tuple[str, bytes]:
     challenge_id = secrets.token_urlsafe(16)
-    answer = _random_code()
+    answer = _random_answer()
     now = time.monotonic()
     expires_at = now + settings.captcha_ttl_seconds
     with _lock:
@@ -103,7 +168,7 @@ def verify(challenge_id: str | None, answer: str | None) -> bool:
     expected, expires_at = entry
     if time.monotonic() > expires_at:
         return False
-    return hmac.compare_digest(expected, answer.strip().upper())
+    return hmac.compare_digest(expected, answer.strip())
 
 
 def size() -> int:

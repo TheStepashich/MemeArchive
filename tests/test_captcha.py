@@ -41,7 +41,7 @@ def make_client(monkeypatch, tmp_path, *, captcha_enabled: bool = True) -> TestC
 
 
 def test_captcha_renders_png(monkeypatch, tmp_path):
-    monkeypatch.setattr(captcha, "_random_code", lambda: "ABCDE")
+    monkeypatch.setattr(captcha, "_random_answer", lambda: "3248")
     with make_client(monkeypatch, tmp_path) as client:
         response = client.get("/captcha")
 
@@ -58,7 +58,7 @@ def test_captcha_renders_png(monkeypatch, tmp_path):
 
 
 def test_captcha_required_and_single_use(monkeypatch, tmp_path):
-    monkeypatch.setattr(captcha, "_random_code", lambda: "ABCDE")
+    monkeypatch.setattr(captcha, "_random_answer", lambda: "3248")
     mock_ai(monkeypatch)
     with make_client(monkeypatch, tmp_path) as client:
         failures_before = stats.snapshot()["captcha_failures"]
@@ -74,7 +74,7 @@ def test_captcha_required_and_single_use(monkeypatch, tmp_path):
         added = client.post(
             "/add",
             files={"file": ("meme.png", png_bytes(), "image/png")},
-            data={"captcha_id": challenge["id"], "captcha_answer": "abcde"},
+            data={"captcha_id": challenge["id"], "captcha_answer": "3248"},
         )
         assert added.status_code == 200, added.text
         assert added.json()["pending"] is False
@@ -82,10 +82,16 @@ def test_captcha_required_and_single_use(monkeypatch, tmp_path):
         replay = client.post(
             "/add",
             files={"file": ("other.png", png_bytes((1, 2, 3)), "image/png")},
-            data={"captcha_id": challenge["id"], "captcha_answer": "ABCDE"},
+            data={"captcha_id": challenge["id"], "captcha_answer": "3248"},
         )
         assert replay.status_code == 400
         assert stats.snapshot()["captcha_failures"] == failures_before + 2
+
+
+def test_number_to_words():
+    assert captcha._number_to_words(3248).find("тысяча") > -1
+    assert captcha._number_to_words(100).find("сто") > -1
+    assert captcha._number_to_words(42).find("сорок") > -1
 
 
 def test_captcha_can_be_disabled(monkeypatch, tmp_path):
