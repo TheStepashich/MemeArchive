@@ -14,9 +14,9 @@ from app.config import settings
 
 _ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 _CODE_LENGTH = 5
-_WIDTH = 300
-_HEIGHT = 104
-_FONT_SIZE = 58
+_WIDTH = 280
+_HEIGHT = 96
+_FONT_SIZE = 52
 
 _FONT_CANDIDATES = (
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
@@ -49,47 +49,34 @@ def _render(code: str) -> bytes:
     image = Image.new("RGB", (_WIDTH, _HEIGHT), background)
     draw = ImageDraw.Draw(image)
 
-    for _ in range(6):
-        points = [(random.uniform(0, _WIDTH), random.uniform(0, _HEIGHT)) for _ in range(3)]
-        draw.line(points, fill=random.choice(_INKS), width=random.choice((1, 2)))
-    for _ in range(170):
+    for _ in range(5):
+        points = [(random.randint(0, _WIDTH), random.randint(0, _HEIGHT)) for _ in range(3)]
+        draw.line(points, fill=random.choice(_INKS), width=random.choice((1, 1, 2)))
+    for _ in range(140):
         draw.point(
-            (random.uniform(0, _WIDTH), random.uniform(0, _HEIGHT)),
+            (random.randint(0, _WIDTH), random.randint(0, _HEIGHT)),
             fill=random.choice(_INKS),
         )
 
     font = _font()
-    spacing = max(34, (_WIDTH - 48) // _CODE_LENGTH)
-    offset_x = 20
+    spacing = (_WIDTH - 40) // _CODE_LENGTH
+    offset_x = 18
     for char in code:
-        scale = random.uniform(0.85, 1.2)
-        glyph = Image.new("RGBA", (max(20, int(spacing * 0.85)), _HEIGHT), (0, 0, 0, 0))
+        glyph = Image.new("RGBA", (spacing + 12, _HEIGHT), (0, 0, 0, 0))
         glyph_draw = ImageDraw.Draw(glyph)
-        glyph_draw.text((8, 20), char, font=font, fill=random.choice(_INKS))
-        glyph = glyph.resize((max(8, int(glyph.width * scale)), max(8, int(glyph.height * scale))), Image.Resampling.BICUBIC)
+        glyph_draw.text((8, 18), char, font=font, fill=random.choice(_INKS))
         glyph = glyph.rotate(
-            random.uniform(-22, 22),
+            random.uniform(-18, 18),
             resample=Image.Resampling.BICUBIC,
             expand=False,
         )
-        image.paste(glyph, (offset_x, int(random.uniform(-5, 5)) + 22), glyph)
+        image.paste(glyph, (offset_x, random.randint(-4, 6) + 16), glyph)
         offset_x += spacing
 
     draw.rectangle((0, 0, _WIDTH - 1, _HEIGHT - 1), outline="#000000", width=3)
-    warp = [
-        random.uniform(4, _WIDTH - 4),
-        random.uniform(4, _HEIGHT - 4),
-        random.uniform(4, _WIDTH - 4),
-        random.uniform(4, _HEIGHT - 4),
-        random.uniform(4, _WIDTH - 4),
-        random.uniform(4, _HEIGHT - 4),
-        random.uniform(4, _WIDTH - 4),
-        random.uniform(4, _HEIGHT - 4),
-    ]
-    distorted = image.transform((_WIDTH, _HEIGHT), Image.Transform.QUAD, warp, resample=Image.Resampling.BICUBIC)
 
     buffer = io.BytesIO()
-    distorted.save(buffer, format="PNG", optimize=True)
+    image.save(buffer, format="PNG", optimize=True)
     return buffer.getvalue()
 
 
