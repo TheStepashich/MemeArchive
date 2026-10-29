@@ -133,16 +133,31 @@ def _render(answer: str) -> bytes:
 
     font_size = _TEXT_SIZE
     font = _font(font_size)
-    box = font.getbbox(text)
-    while (box[2] - box[0]) > _WIDTH - 16 and font_size > 14:
-        font_size -= 1
-        font = _font(font_size)
-        box = font.getbbox(text)
-    text_width = box[2] - box[0]
-    text_height = box[3] - box[1]
-    x = int((_WIDTH - text_width) / 2 - box[0])
-    y = int((_HEIGHT - text_height) / 2 - box[1])
-    draw.text((x, y), text, font=font, fill=random.choice(_INKS))
+    words = [word for word in text.split() if word]
+    lines: list[str] = []
+    current_line = ""
+    for word in words:
+        candidate = f"{current_line} {word}".strip() if current_line else word
+        if not current_line:
+            current_line = word
+            continue
+        candidate_box = font.getbbox(candidate)
+        if (candidate_box[2] - candidate_box[0]) <= _WIDTH - 16:
+            current_line = candidate
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+
+    line_boxes = [font.getbbox(line) for line in lines]
+    total_height = sum(box[3] - box[1] for box in line_boxes) + max(0, len(lines) - 1) * 6
+    cursor_y = int((_HEIGHT - total_height) / 2)
+    for box, line in zip(line_boxes, lines):
+        line_width = box[2] - box[0]
+        x = int((_WIDTH - line_width) / 2 - box[0])
+        draw.text((x, cursor_y), line, font=font, fill=random.choice(_INKS))
+        cursor_y += box[3] - box[1] + 6
 
     draw.rectangle((0, 0, _WIDTH - 1, _HEIGHT - 1), outline="#000000", width=3)
 
