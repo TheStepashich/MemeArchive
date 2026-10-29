@@ -439,7 +439,7 @@ def get_tags(
     return service.list_tags(limit=limit)
 
 
-@app.get("/image/{filename}")
+@app.api_route("/image/{filename}", methods=["GET", "HEAD"])
 def get_image_file(filename: str) -> FileResponse:
     path = safe_upload_path(filename)
     if not path.is_file():
