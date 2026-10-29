@@ -15,12 +15,13 @@ from app.config import settings
 _WIDTH = 280
 _HEIGHT = 96
 _FONT_SIZE = 52
-_TEXT_SIZE = 34
+_TEXT_SIZE = 24
 
 _FONT_CANDIDATES = (
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/liberation/LiberationSans-Bold.ttf",
 )
 _BACKGROUNDS = ("#E0E7FF", "#F3F4F6", "#FFFFFF", "#FDF4FF", "#F7FEE7")
 _INKS = ("#000000", "#7C3AED", "#0EA5E9", "#DB2777", "#65A30D")
@@ -130,8 +131,13 @@ def _render(answer: str) -> bytes:
     for _ in range(140):
         draw.point((random.randint(0, _WIDTH), random.randint(0, _HEIGHT)), fill=random.choice(_INKS))
 
-    font = _font()
+    font_size = _TEXT_SIZE
+    font = _font(font_size)
     box = font.getbbox(text)
+    while (box[2] - box[0]) > _WIDTH - 16 and font_size > 14:
+        font_size -= 1
+        font = _font(font_size)
+        box = font.getbbox(text)
     text_width = box[2] - box[0]
     text_height = box[3] - box[1]
     x = int((_WIDTH - text_width) / 2 - box[0])
