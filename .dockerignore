@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+.venv
+venv
+__pycache__
+*.py[cod]
+.pytest_cache
+chroma_db
+uploads
+data
+memes
+processed_files.log
+log
+tests
+README.md

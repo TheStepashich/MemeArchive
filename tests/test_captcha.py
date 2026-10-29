@@ -53,8 +53,8 @@ def test_captcha_renders_png(monkeypatch, tmp_path):
     encoded = payload["image"].split(",", 1)[1]
     with Image.open(io.BytesIO(base64.b64decode(encoded))) as image:
         assert image.format == "PNG"
-        assert image.width == 280
-        assert image.height == 96
+        assert image.width == 300
+        assert image.height == 104
 
 
 def test_captcha_required_and_single_use(monkeypatch, tmp_path):

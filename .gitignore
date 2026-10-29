@@ -1,6 +1,13 @@
-venv
-__pycache__
-chroma_db
-uploads
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+chroma_db/
+uploads/
+data/
+memes/
 processed_files.log
 log
+embed_cache.db*
