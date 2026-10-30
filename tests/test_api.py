@@ -17,6 +17,33 @@ def png_bytes(color: tuple[int, int, int] = (0, 128, 255)) -> bytes:
     return buffer.getvalue()
 
 
+def test_seo_endpoints(monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "uploads_dir", tmp_path / "uploads")
+    monkeypatch.setattr(settings, "chroma_dir", tmp_path / "chroma")
+    monkeypatch.setattr(settings, "meme_in_dir", tmp_path / "memes")
+    monkeypatch.setattr(settings, "stats_file", tmp_path / "stats.json")
+    monkeypatch.setattr(settings, "embed_cache_file", tmp_path / "embed.db")
+    monkeypatch.setattr(settings, "scan_interval", 0)
+    db.get_collection.cache_clear()
+    ai.reset_blocked()
+
+    from app.main import app
+
+    with TestClient(app) as client:
+        robots = client.get("/robots.txt")
+        assert robots.status_code == 200
+        assert robots.headers["content-type"].startswith("text/plain")
+        assert "Sitemap:" in robots.text
+
+        sitemap = client.get("/sitemap.xml")
+        assert sitemap.status_code == 200
+        assert "memearchive.potatom.net" in sitemap.text
+
+        index = client.get("/")
+        assert index.status_code == 200
+        assert "Семантический архив мемов" in index.text
+
+
 def test_full_flow(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "uploads_dir", tmp_path / "uploads")
     monkeypatch.setattr(settings, "chroma_dir", tmp_path / "chroma")

@@ -602,6 +602,22 @@ def admin_page() -> FileResponse:
     return FileResponse(page, media_type="text/html")
 
 
+@app.get("/robots.txt")
+def robots_txt() -> FileResponse:
+    return FileResponse(
+        Path(STATIC_DIR) / "robots.txt",
+        media_type="text/plain",
+    )
+
+
+@app.get("/sitemap.xml")
+def sitemap_xml() -> FileResponse:
+    return FileResponse(
+        Path(STATIC_DIR) / "sitemap.xml",
+        media_type="application/xml",
+    )
+
+
 @app.get("/meme/{image_id}", response_class=FileResponse)
 def meme_page(image_id: str) -> FileResponse:
     page = Path(STATIC_DIR) / "meme.html"
