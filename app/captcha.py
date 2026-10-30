@@ -12,10 +12,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 from app.config import settings
 
-_WIDTH = 280
-_HEIGHT = 96
+_WIDTH = 240
+_HEIGHT = 84
 _FONT_SIZE = 52
-_TEXT_SIZE = 24
+_TEXT_SIZE = 22
 
 _FONT_CANDIDATES = (
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
