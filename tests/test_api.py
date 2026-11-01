@@ -105,6 +105,10 @@ def test_full_flow(monkeypatch, tmp_path):
 
         assert client.get(f"/meme/{added['id']}").status_code == 200
 
+        sitemap = client.get("/sitemap.xml")
+        assert sitemap.status_code == 200
+        assert f"https://memearchive.potatom.net/meme/{added['id']}" in sitemap.text
+
         embedding_calls.clear()
         results = client.post("/search", json={"query": "cat", "n_results": 5}).json()
         assert results["matched_tag"] == "cat"

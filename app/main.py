@@ -56,6 +56,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+SITE_URL = "https://memearchive.potatom.net"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -611,11 +613,25 @@ def robots_txt() -> FileResponse:
 
 
 @app.get("/sitemap.xml")
-def sitemap_xml() -> FileResponse:
-    return FileResponse(
-        Path(STATIC_DIR) / "sitemap.xml",
-        media_type="application/xml",
-    )
+def sitemap_xml() -> Response:
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        "  <url>",
+        f"    <loc>{SITE_URL}/</loc>",
+        "    <changefreq>daily</changefreq>",
+        "    <priority>1.0</priority>",
+        "  </url>",
+    ]
+    for image_id, created_at in service.sitemap_entries():
+        lines.append("  <url>")
+        lines.append(f"    <loc>{SITE_URL}/meme/{image_id}</loc>")
+        if created_at:
+            lines.append(f"    <lastmod>{created_at.split('T')[0]}</lastmod>")
+        lines.append("    <changefreq>monthly</changefreq>")
+        lines.append("  </url>")
+    lines.append("</urlset>")
+    return Response("\n".join(lines) + "\n", media_type="application/xml")
 
 
 @app.get("/meme/{image_id}", response_class=FileResponse)

@@ -199,6 +199,14 @@ def migrate_pending_flag() -> int:
     return len(missing_ids)
 
 
+def db_get_ids_metadatas() -> dict[str, Any]:
+    result = get_collection().get(include=["metadatas"])
+    return {
+        "ids": result.get("ids") or [],
+        "metadatas": result.get("metadatas") or [],
+    }
+
+
 def db_get_all() -> dict[str, Any]:
     result = get_collection().get(include=["documents", "metadatas"])
     return {
