@@ -651,7 +651,7 @@ const el = {
         const saved = urlQuery ? null : readFeedState();
 
         if (saved) {
-            el.sortSelect.value = saved.order || 'new';
+            el.sortSelect.value = saved.order || 'random';
             order = el.sortSelect.value;
             selectedTags = new Set(saved.selectedTags || []);
         }
