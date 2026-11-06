@@ -103,11 +103,16 @@ def test_full_flow(monkeypatch, tmp_path):
         assert listing["results"][0]["id"] == added["id"]
         assert listing["results"][0]["created_at"]
 
-        assert client.get(f"/meme/{added['id']}").status_code == 200
+        meme_page = client.get(f"/meme/{added['id']}")
+        assert meme_page.status_code == 200
+        assert f'rel="canonical" href="https://memearchive.potatom.net/meme/{added["id"]}"' in meme_page.text
+        assert "<h1" in meme_page.text
+        assert "funny cat" in meme_page.text
 
         sitemap = client.get("/sitemap.xml")
         assert sitemap.status_code == 200
         assert f"https://memearchive.potatom.net/meme/{added['id']}" in sitemap.text
+        assert "<image:loc>" in sitemap.text
 
         embedding_calls.clear()
         results = client.post("/search", json={"query": "cat", "n_results": 5}).json()

@@ -8,7 +8,7 @@
     <link rel="icon" href="/static/plogo_nbg_64.png" type="image/png">
     <meta name="description" content="Семантический архив мемов: описания, теги и семантический поиск по смыслу.">
     <meta name="keywords" content="мем, мемы, архив мемов, семантический поиск, теги">
-    <meta name="robots" content="index, follow">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
     <link rel="canonical" href="https://memearchive.potatom.net/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Meme Archive">
@@ -77,8 +77,9 @@
 </div>
 
 <main class="main">
+    <h1 class="visually-hidden">Meme Archive — семантический архив мемов</h1>
     <div id="searchMeta" class="feed-meta hidden"></div>
-    <div id="results" class="memes-grid" aria-live="polite"></div>
+    <div id="results" class="memes-grid" aria-live="polite"><!--SSR_FEED--></div>
     <div id="feedSentinel" class="load-more hidden">
         <button id="loadMoreBtn" class="btn-load-more" type="button">ЗАГРУЗИТЬ ЕЩЁ &gt;</button>
     </div>

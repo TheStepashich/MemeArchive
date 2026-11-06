@@ -73,9 +73,18 @@ const imageId = decodeURIComponent(
             });
         }
 
+        function memeTitle(record) {
+            const line = (record.description || '').trim().split('\n')[0];
+            if (!line) return record.original_filename || 'Мем';
+            if (line.length <= 70) return line;
+            const cut = line.slice(0, 70);
+            return cut.slice(0, cut.lastIndexOf(' ') > 0 ? cut.lastIndexOf(' ') : 70).replace(/[\s,.;:—-]+$/, '') + '…';
+        }
+
         function render() {
-            document.title = (item.original_filename || 'Мем') + ' — Meme Archive';
-            el.title.textContent = item.original_filename || 'Мем';
+            const title = memeTitle(item);
+            document.title = title + ' — Meme Archive';
+            el.title.textContent = title;
             el.image.src = '/image/' + encodeURIComponent(item.stored_name || '');
             el.image.alt = item.description || 'Мем';
             el.description.textContent = item.description || 'Описание отсутствует.';

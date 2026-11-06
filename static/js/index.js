@@ -407,23 +407,10 @@ const el = {
     }
 
     function buildCard(item) {
-        const card = document.createElement('article');
+        const card = document.createElement('a');
         card.className = 'meme-card';
-        card.tabIndex = 0;
-        const openMeme = () => {
-            saveFeedState();
-            window.location.href = '/meme/' + encodeURIComponent(item.id);
-        };
-        card.addEventListener('click', (event) => {
-            if (event.target.closest('button')) return;
-            openMeme();
-        });
-        card.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                openMeme();
-            }
-        });
+        card.href = '/meme/' + encodeURIComponent(item.id);
+        card.addEventListener('click', () => saveFeedState());
 
         const img = document.createElement('img');
         img.className = 'meme-image';

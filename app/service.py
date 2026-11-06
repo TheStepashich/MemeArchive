@@ -223,15 +223,18 @@ def set_favorite(image_id: str, favorite: bool) -> dict[str, Any]:
     return _build_record(image_id, description, metadata)
 
 
-def sitemap_entries() -> list[tuple[str, str | None]]:
+def sitemap_entries() -> list[tuple[str, str | None, str | None]]:
     raw = db.db_get_ids_metadatas()
-    entries: list[tuple[str, str | None]] = []
+    entries: list[tuple[str, str | None, str | None]] = []
     for image_id, metadata in zip(raw["ids"], raw["metadatas"]):
         metadata = metadata or {}
         if metadata.get("pending"):
             continue
         created_at = metadata.get("created_at")
-        entries.append((image_id, str(created_at) if created_at else None))
+        stored_name = metadata.get("stored_name") or None
+        entries.append(
+            (image_id, str(created_at) if created_at else None, str(stored_name) if stored_name else None)
+        )
     return entries
 
 

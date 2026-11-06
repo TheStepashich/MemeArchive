@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import (
     Depends,
@@ -25,11 +26,11 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
-from app import ai, captcha, db, moderation, pending, service, stats
+from app import ai, captcha, db, moderation, pending, seo, service, stats
 from app.config import STATIC_DIR, settings
 from app.errors import AppError, CaptchaError, NotFoundError, UpstreamAIError
 from app.images import safe_upload_path
@@ -588,12 +589,19 @@ def admin_delete_meme(image_id: str) -> dict[str, bool]:
     return {"deleted": True}
 
 
-@app.get("/", response_class=FileResponse)
-def index() -> FileResponse:
+@app.get("/", response_class=HTMLResponse)
+def index() -> HTMLResponse:
     index_file = Path(STATIC_DIR) / "index.html"
     if not index_file.is_file():
         raise HTTPException(status_code=500, detail="index.html не найден.")
-    return FileResponse(index_file, media_type="text/html")
+    template = index_file.read_text(encoding="utf-8")
+    try:
+        records = service.list_images(limit=24, order="new")["results"]
+    except Exception:
+        logger.exception("Не удалось подготовить серверную ленту для главной")
+        records = []
+    html = template.replace("<!--SSR_FEED-->", seo.render_feed(records, SITE_URL), 1)
+    return HTMLResponse(html)
 
 
 @app.get("/admin", response_class=FileResponse, include_in_schema=False)
@@ -616,27 +624,46 @@ def robots_txt() -> FileResponse:
 def sitemap_xml() -> Response:
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
+        '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
         "  <url>",
         f"    <loc>{SITE_URL}/</loc>",
         "    <changefreq>daily</changefreq>",
         "    <priority>1.0</priority>",
         "  </url>",
     ]
-    for image_id, created_at in service.sitemap_entries():
+    for image_id, created_at, stored_name in service.sitemap_entries():
+        page_url = f"{SITE_URL}/meme/{image_id}"
         lines.append("  <url>")
-        lines.append(f"    <loc>{SITE_URL}/meme/{image_id}</loc>")
+        lines.append(f"    <loc>{page_url}</loc>")
         if created_at:
             lines.append(f"    <lastmod>{created_at.split('T')[0]}</lastmod>")
         lines.append("    <changefreq>monthly</changefreq>")
+        if stored_name:
+            image_loc = f"{SITE_URL}/image/{quote(stored_name)}"
+            lines.append("    <image:image>")
+            lines.append(f"      <image:loc>{image_loc}</image:loc>")
+            lines.append("    </image:image>")
         lines.append("  </url>")
     lines.append("</urlset>")
     return Response("\n".join(lines) + "\n", media_type="application/xml")
 
 
-@app.get("/meme/{image_id}", response_class=FileResponse)
-def meme_page(image_id: str) -> FileResponse:
+@app.get("/meme/{image_id}", response_class=HTMLResponse)
+def meme_page(image_id: str) -> HTMLResponse:
     page = Path(STATIC_DIR) / "meme.html"
     if not page.is_file():
         raise HTTPException(status_code=500, detail="meme.html не найден.")
-    return FileResponse(page, media_type="text/html")
+    template = page.read_text(encoding="utf-8")
+    try:
+        record = service.get_image(image_id)
+    except NotFoundError:
+        return HTMLResponse(
+            "<!DOCTYPE html><html lang=\"ru\"><head><meta charset=\"utf-8\">"
+            "<title>Мем не найден — Meme Archive</title>"
+            '<meta name="robots" content="noindex">'
+            "</head><body><h1>Мем не найден</h1>"
+            '<p><a href="/">Вернуться к ленте</a></p></body></html>',
+            status_code=404,
+        )
+    return HTMLResponse(seo.render_meme_page(template, record, SITE_URL))

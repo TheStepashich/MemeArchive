@@ -189,6 +189,8 @@
     cursor: pointer;
     display: flex;
     flex-direction: column;
+    color: inherit;
+    text-decoration: none;
 }
 .meme-card:hover {
     transform: translate(-3px, -3px);
