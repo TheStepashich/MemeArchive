@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 os.environ.setdefault("API_KEY", "test-key")
 os.environ.setdefault("EMBEDDING_MODEL", "test-embedding")
 os.environ.setdefault("RECOGNIZING_MODEL", "test-recognizing")
@@ -12,3 +14,12 @@ os.environ.setdefault("CAPTCHA_ENABLED", "0")
 os.environ.setdefault("PENDING_TTL_SECONDS", "0")
 os.environ.setdefault("ADMIN_TOKEN", "test-admin")
 os.environ.setdefault("MAX_PENDING_ITEMS", "100")
+
+
+@pytest.fixture(autouse=True)
+def reset_sitemap_cache():
+    from app import main
+
+    main._sitemap_cache = None
+    yield
+    main._sitemap_cache = None

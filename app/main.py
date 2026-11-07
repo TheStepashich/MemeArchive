@@ -9,6 +9,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import Lock
 from typing import Annotated
 from urllib.parse import quote
 
@@ -58,6 +59,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 SITE_URL = "https://memearchive.potatom.net"
+SITEMAP_PAGE_SIZE = 100
+SITEMAP_CACHE_TTL = 300
+_sitemap_cache: tuple[float, str, list[str]] | None = None
+_sitemap_lock = Lock()
 
 
 @asynccontextmanager
@@ -620,19 +625,27 @@ def robots_txt() -> FileResponse:
     )
 
 
-@app.get("/sitemap.xml")
-def sitemap_xml() -> Response:
+def _render_sitemap_urlset(
+    entries: list[tuple[str, str | None, str | None]],
+    *,
+    include_home: bool,
+) -> str:
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
         '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
-        "  <url>",
-        f"    <loc>{SITE_URL}/</loc>",
-        "    <changefreq>daily</changefreq>",
-        "    <priority>1.0</priority>",
-        "  </url>",
     ]
-    for image_id, created_at, stored_name in service.sitemap_entries():
+    if include_home:
+        lines.extend(
+            [
+                "  <url>",
+                f"    <loc>{SITE_URL}/</loc>",
+                "    <changefreq>daily</changefreq>",
+                "    <priority>1.0</priority>",
+                "  </url>",
+            ]
+        )
+    for image_id, created_at, stored_name in entries:
         page_url = f"{SITE_URL}/meme/{image_id}"
         lines.append("  <url>")
         lines.append(f"    <loc>{page_url}</loc>")
@@ -646,7 +659,73 @@ def sitemap_xml() -> Response:
             lines.append("    </image:image>")
         lines.append("  </url>")
     lines.append("</urlset>")
-    return Response("\n".join(lines) + "\n", media_type="application/xml")
+    return "\n".join(lines) + "\n"
+
+
+def _build_sitemaps() -> tuple[str, list[str]]:
+    entries = service.sitemap_entries()
+    chunks = [
+        entries[start:start + SITEMAP_PAGE_SIZE]
+        for start in range(0, len(entries), SITEMAP_PAGE_SIZE)
+    ] or [[]]
+    pages = [
+        _render_sitemap_urlset(chunk, include_home=index == 0)
+        for index, chunk in enumerate(chunks)
+    ]
+
+    lastmod = max(
+        (created_at.split("T")[0] for _, created_at, _ in entries if created_at),
+        default=datetime.now(UTC).strftime("%Y-%m-%d"),
+    )
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    for index in range(1, len(pages) + 1):
+        lines.append("  <sitemap>")
+        lines.append(f"    <loc>{SITE_URL}/sitemap-{index}.xml</loc>")
+        lines.append(f"    <lastmod>{lastmod}</lastmod>")
+        lines.append("  </sitemap>")
+    lines.append("</sitemapindex>")
+    return "\n".join(lines) + "\n", pages
+
+
+def _get_sitemaps() -> tuple[str, list[str]]:
+    global _sitemap_cache
+    now = time.monotonic()
+    cached = _sitemap_cache
+    if cached is not None and now - cached[0] < SITEMAP_CACHE_TTL:
+        return cached[1], cached[2]
+
+    with _sitemap_lock:
+        cached = _sitemap_cache
+        if cached is not None and time.monotonic() - cached[0] < SITEMAP_CACHE_TTL:
+            return cached[1], cached[2]
+        index, pages = _build_sitemaps()
+        _sitemap_cache = (time.monotonic(), index, pages)
+        return index, pages
+
+
+@app.get("/sitemap.xml")
+def sitemap_index() -> Response:
+    index, _ = _get_sitemaps()
+    return Response(
+        index,
+        media_type="application/xml",
+        headers={"Cache-Control": "public, max-age=300"},
+    )
+
+
+@app.get("/sitemap-{page}.xml")
+def sitemap_page(page: int) -> Response:
+    _, pages = _get_sitemaps()
+    if page < 1 or page > len(pages):
+        raise NotFoundError("Sitemap не найден.")
+    return Response(
+        pages[page - 1],
+        media_type="application/xml",
+        headers={"Cache-Control": "public, max-age=300"},
+    )
 
 
 @app.get("/meme/{image_id}", response_class=HTMLResponse)

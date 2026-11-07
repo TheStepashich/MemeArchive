@@ -38,6 +38,7 @@ def test_seo_endpoints(monkeypatch, tmp_path):
         sitemap = client.get("/sitemap.xml")
         assert sitemap.status_code == 200
         assert "memearchive.potatom.net" in sitemap.text
+        assert "/sitemap-1.xml" in sitemap.text
 
         index = client.get("/")
         assert index.status_code == 200
@@ -109,7 +110,10 @@ def test_full_flow(monkeypatch, tmp_path):
         assert "<h1" in meme_page.text
         assert "funny cat" in meme_page.text
 
-        sitemap = client.get("/sitemap.xml")
+        sitemap_index = client.get("/sitemap.xml")
+        assert sitemap_index.status_code == 200
+        assert "/sitemap-1.xml" in sitemap_index.text
+        sitemap = client.get("/sitemap-1.xml")
         assert sitemap.status_code == 200
         assert f"https://memearchive.potatom.net/meme/{added['id']}" in sitemap.text
         assert "<image:loc>" in sitemap.text
