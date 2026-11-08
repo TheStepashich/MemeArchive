@@ -8,6 +8,10 @@ const el = {
         addBtn: document.getElementById('addBtn'),
         uploadWrap: document.getElementById('uploadWrap'),
         imageFile: document.getElementById('imageFile'),
+        uploadPreview: document.getElementById('uploadPreview'),
+        uploadPreviewImage: document.getElementById('uploadPreviewImage'),
+        uploadPreviewName: document.getElementById('uploadPreviewName'),
+        uploadClearBtn: document.getElementById('uploadClearBtn'),
         uploadTagsInput: document.getElementById('uploadTagsInput'),
         uploadBtn: document.getElementById('uploadBtn'),
         cancelUploadBtn: document.getElementById('cancelUploadBtn'),
@@ -39,6 +43,8 @@ const el = {
     let searchController = null;
     let captchaEnabled = false;
     let captchaId = null;
+    let uploadFile = null;
+    let uploadPreviewUrl = null;
 
     function toast(message, type = 'info') {
         const node = document.createElement('div');
@@ -79,6 +85,73 @@ const el = {
         el.uploadLoader.classList.toggle('hidden', !isUploading);
         el.uploadBtn.disabled = isUploading;
         el.cancelUploadBtn.disabled = isUploading;
+        el.uploadClearBtn.disabled = isUploading;
+    }
+
+    function clipboardFileName(type) {
+        const ext = {
+            'image/jpeg': 'jpg',
+            'image/png': 'png',
+            'image/webp': 'webp',
+            'image/gif': 'gif',
+            'image/bmp': 'bmp',
+            'image/avif': 'avif'
+        }[type] || 'png';
+        const now = new Date();
+        const pad = (value) => String(value).padStart(2, '0');
+        return 'clipboard-' + now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate())
+            + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds())
+            + '.' + ext;
+    }
+
+    function setUploadFile(file, { syncInput = true } = {}) {
+        uploadFile = file || null;
+
+        if (uploadPreviewUrl) {
+            URL.revokeObjectURL(uploadPreviewUrl);
+            uploadPreviewUrl = null;
+        }
+
+        if (file) {
+            uploadPreviewUrl = URL.createObjectURL(file);
+            el.uploadPreviewImage.src = uploadPreviewUrl;
+            el.uploadPreviewName.textContent = file.name || clipboardFileName(file.type);
+            el.uploadPreview.classList.remove('hidden');
+            if (syncInput) {
+                try {
+                    const transfer = new DataTransfer();
+                    transfer.items.add(file);
+                    el.imageFile.files = transfer.files;
+                } catch (err) {
+                    // В старых браузерах DataTransfer недоступен — файл остаётся в uploadFile.
+                    console.debug('Не удалось синхронизировать file input', err);
+                }
+            }
+        } else {
+            el.uploadPreviewImage.removeAttribute('src');
+            el.uploadPreviewName.textContent = '';
+            el.uploadPreview.classList.add('hidden');
+            el.imageFile.value = '';
+        }
+    }
+
+    function imageFromClipboard(event) {
+        const clipboard = event.clipboardData;
+        if (!clipboard) return null;
+
+        const items = clipboard.items || [];
+        for (const item of items) {
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) return file;
+            }
+        }
+
+        const files = clipboard.files || [];
+        for (const file of files) {
+            if (file.type.startsWith('image/')) return file;
+        }
+        return null;
     }
 
     function setSearching(value) {
@@ -117,17 +190,52 @@ const el = {
 
     el.addBtn.addEventListener('click', () => {
         el.uploadWrap.classList.toggle('visible');
+        if (el.uploadWrap.classList.contains('visible')) {
+            el.imageFile.focus();
+        }
     });
 
     el.cancelUploadBtn.addEventListener('click', () => {
         el.uploadWrap.classList.remove('visible');
-        el.imageFile.value = '';
+        setUploadFile(null);
         el.uploadTagsInput.value = '';
         if (captchaEnabled) refreshCaptcha();
     });
 
+    el.uploadClearBtn.addEventListener('click', () => {
+        setUploadFile(null);
+        el.imageFile.focus();
+    });
+
+    el.imageFile.addEventListener('change', () => {
+        setUploadFile(el.imageFile.files?.[0] || null, { syncInput: false });
+    });
+
+    document.addEventListener('paste', (event) => {
+        const file = imageFromClipboard(event);
+        if (!file) return;
+
+        event.preventDefault();
+        if (isUploading) {
+            toast('Дождитесь окончания загрузки', 'info');
+            return;
+        }
+
+        const name = file.name || '';
+        const generic = !name || /^image\.(png|jpe?g)$/i.test(name) || name === 'blob';
+        const prepared = generic
+            ? new File([file], clipboardFileName(file.type), { type: file.type })
+            : file;
+
+        el.uploadWrap.classList.add('visible');
+        setUploadFile(prepared);
+        el.uploadWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.uploadTagsInput.focus({ preventScroll: true });
+        toast('Картинка вставлена из буфера обмена', 'success');
+    });
+
     el.uploadBtn.addEventListener('click', async () => {
-        const file = el.imageFile.files?.[0];
+        const file = uploadFile || el.imageFile.files?.[0];
         if (!file) {
             toast('Выберите изображение для загрузки', 'error');
             return;
@@ -152,7 +260,7 @@ const el = {
                 throw new Error(await readError(res));
             }
             const data = await res.json();
-            el.imageFile.value = '';
+            setUploadFile(null);
             el.uploadTagsInput.value = '';
             el.uploadWrap.classList.remove('visible');
             if (data.pending) {

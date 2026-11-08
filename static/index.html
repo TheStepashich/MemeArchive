@@ -67,6 +67,14 @@
 <div id="uploadWrap" class="upload-wrap">
     <div class="upload-form">
         <input id="imageFile" type="file" accept="image/*" />
+        <div id="uploadPreview" class="upload-preview hidden">
+            <img id="uploadPreviewImage" alt="Предпросмотр изображения" />
+            <div class="upload-preview-info">
+                <span id="uploadPreviewName" class="upload-preview-name"></span>
+                <button id="uploadClearBtn" type="button" class="btn">Убрать</button>
+            </div>
+        </div>
+        <p class="upload-hint">Можно вставить картинку из буфера обмена: <kbd>Ctrl</kbd>+<kbd>V</kbd> (на Mac — <kbd>⌘</kbd>+<kbd>V</kbd>).</p>
         <input type="text" id="uploadTagsInput" placeholder="теги через запятую" aria-label="Теги изображения" />
         <div id="captchaRow" class="captcha-row hidden">
             <img id="captchaImage" class="captcha-image" alt="Код проверки" />
