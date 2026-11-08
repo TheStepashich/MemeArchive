@@ -58,6 +58,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Некоторые slim-образы Python не знают webp/avif, и FileResponse отдаёт их
+# как application/octet-stream. Telegram и браузеры ждут image/*.
+mimetypes.add_type("image/webp", ".webp")
+mimetypes.add_type("image/avif", ".avif")
+
 SITE_URL = "https://memearchive.potatom.net"
 SITEMAP_PAGE_SIZE = 100
 SITEMAP_CACHE_TTL = 300
